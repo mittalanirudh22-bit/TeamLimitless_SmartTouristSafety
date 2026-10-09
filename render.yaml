@@ -15,3 +15,6 @@ services:
         fromDatabase:
           name: limitless-db
           property: connectionString
+      # Operator dashboard password. Render generates it once; read it under the service's Environment tab.
+      - key: OPS_TOKEN
+        generateValue: true

@@ -8,3 +8,4 @@ pyyaml
 shapely
 sqlalchemy
 psycopg[binary]
+tzdata

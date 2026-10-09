@@ -39,3 +39,9 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 The API uses SQLite by default; set `DATABASE_URL` to the PostGIS URL to use Postgres (tables are created on startup).
 Deploy anywhere that runs Docker: `docker build -t limitless . && docker run -p 8000:8000 limitless` (see `Dockerfile`).
+
+## Traveller registration & tracking
+- `/` — travellers register (with explicit location-tracking consent), receive a blockchain ID (`TLB-XXXX-XXXX-XXXX-XXXX`) and a private tracking login stored in their browser, then opt in to GPS tracking. Anyone can verify an ID on the same page (`GET /api/verify/{id}`).
+- `/#/ops` — operator dashboard (live map, incidents, ledger). Protected by the `OPS_TOKEN` env var when set; open when unset (local dev).
+- The "blockchain" is a private SHA-256 hash chain in the database (`backend/ledger.py`): registrations, tracking start/stop and incident events are chained; only salted hashes are stored, never personal data. It detects silent edits but is not a public chain.
+- Browser GPS needs HTTPS (Render provides it) or localhost. "Use demo movement" simulates a walk for testing.

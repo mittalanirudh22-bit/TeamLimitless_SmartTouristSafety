@@ -1,6 +1,7 @@
 """Turns raw GPS fixes into the seven risk-engine inputs, then scores them."""
 import math
 from datetime import timezone
+from zoneinfo import ZoneInfo
 from functools import lru_cache
 import joblib, numpy as np, pandas as pd, yaml
 from shapely.geometry import Point, shape
@@ -108,7 +109,12 @@ def assess(db: Session, tourist: m.Tourist, lat, lon, ts, sos=0.0, hour=None):
         d = math.hypot(px - (ax + t * (bx - ax)), py - (ay + t * (by - ay))) * 111000
         route_dev = min(1.0, d / 1500)
 
-    h = hour if hour is not None else ts.hour
+    if hour is None:
+        try:
+            hour = ts.astimezone(ZoneInfo(location_cfg(tourist.location_slug)['location'].get('timezone', 'UTC'))).hour
+        except Exception:
+            hour = ts.hour
+    h = hour
     inputs = dict(movement_anomaly=round(anomaly, 4), geofence_risk=geo_risk, route_deviation=round(route_dev, 4),
                   inactivity=round(min(1.0, inactivity / 900), 4), historical_context=historical_context(db, tourist.location_slug),
                   night_flag=1.0 if (h >= 22 or h <= 5) else 0.0, sos=float(sos))

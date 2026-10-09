@@ -3,6 +3,7 @@ location:
   name: City Name
   state: State
   country: Country
+  timezone: UTC
 
 data:
   gps: data/raw/geolife

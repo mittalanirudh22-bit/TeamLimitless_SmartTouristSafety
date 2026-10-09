@@ -112,3 +112,32 @@ class IncidentAudit(Base):
     actor = Column(String)
     details = Column(JSON)
     created_at = Column(DateTime(timezone=True), default=now)
+
+
+class Registration(Base):
+    """Traveller profile. PII lives here (and only here); the ledger stores hashes."""
+    __tablename__ = 'registrations'
+    tourist_id = Column(String, ForeignKey('tourists.tourist_id'), primary_key=True)
+    full_name = Column(String, nullable=False)
+    nationality = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    email = Column(String)
+    emergency_name = Column(String, nullable=False)
+    emergency_phone = Column(String, nullable=False)
+    blockchain_id = Column(String, unique=True, index=True, nullable=False)
+    token_hash = Column(String, unique=True, index=True, nullable=False)
+    salt = Column(String, nullable=False)
+    consent_at = Column(DateTime(timezone=True), nullable=False)
+    registered_at = Column(DateTime(timezone=True), default=now)
+
+
+class LedgerBlock(Base):
+    """Append-only hash chain. hash = sha256(idx|ts|block_type|ref|payload_hash|prev_hash)."""
+    __tablename__ = 'ledger_blocks'
+    idx = Column(Integer, primary_key=True, autoincrement=False)
+    ts = Column(String, nullable=False)
+    block_type = Column(String, nullable=False)
+    ref = Column(String, index=True)
+    payload_hash = Column(String, nullable=False)
+    prev_hash = Column(String, nullable=False)
+    hash = Column(String, unique=True, nullable=False)

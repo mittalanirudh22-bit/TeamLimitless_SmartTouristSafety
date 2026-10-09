@@ -12,6 +12,7 @@ d=ROOT/'locations'/slug; d.mkdir(parents=True,exist_ok=True)
   name: {a.city}
   state: {a.state}
   country: {a.country}
+  timezone: Asia/Kolkata
 
 data:
   gps: data/raw/geolife

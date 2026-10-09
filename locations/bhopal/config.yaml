@@ -3,6 +3,7 @@ location:
   name: Bhopal
   state: Madhya Pradesh
   country: India
+  timezone: Asia/Kolkata
 
 data:
   gps: data/raw/geolife
