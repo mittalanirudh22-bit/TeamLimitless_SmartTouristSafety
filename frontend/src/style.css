@@ -1,0 +1,20 @@
+:root{--bg:#f5f6f8;--card:#fff;--fg:#1c2230;--muted:#6b7385;--line:#e2e5ec;--accent:#2e5bd9}
+@media(prefers-color-scheme:dark){:root{--bg:#12151c;--card:#1b202b;--fg:#e8ebf2;--muted:#929bb0;--line:#2b3242}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:20px 16px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:26px}header p{margin:2px 0 14px;color:var(--muted)}h2{margin:0 0 10px;font-size:17px}h3{font-size:14px;margin:14px 0 6px}small{color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.full{grid-column:1/-1}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.map{height:420px;border-radius:8px;z-index:0}
+button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}button.sos{background:#d93a3a;width:100%;margin-top:12px}
+.actions{display:flex;gap:8px}.err{background:#d93a3a;color:#fff;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+.trow{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;justify-content:space-between}.trow.on{background:var(--bg)}.trow span:first-child{flex:1}
+.pill{color:#fff;font-size:12px;padding:2px 8px;border-radius:99px}
+.frow{display:grid;grid-template-columns:110px 1fr 40px;gap:8px;align-items:center;font-size:13px;margin:3px 0}.frow span{color:var(--muted)}
+.bar{background:var(--bg);height:8px;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-x:auto}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.acts{display:flex;gap:6px}.acts button{padding:4px 8px;font-size:13px}.muted{color:var(--muted)}
+footer{margin-top:16px;color:var(--muted);font-size:12px}

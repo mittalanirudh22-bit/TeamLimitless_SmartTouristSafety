@@ -1,0 +1,8 @@
+.venv/
+node_modules/
+.env
+data/
+ml/models/
+frontend/dist/
+__pycache__/
+*.db

@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: team-limitless-tourist-safety
+    runtime: docker
+    plan: free
+    healthCheckPath: /health

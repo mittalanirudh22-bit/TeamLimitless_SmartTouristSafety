@@ -1,0 +1,25 @@
+location:
+  slug: city-slug
+  name: City Name
+  state: State
+  country: Country
+
+data:
+  gps: data/raw/geolife
+  osm: data/external/osm/city.osm.pbf
+  tourism: data/external/tourism/city_tourism.csv
+  crime: data/external/ncrb/city_crime.csv
+  weather: data/external/weather/city_weather.csv
+
+risk:
+  weights:
+    movement_anomaly: 0.35
+    geofence_risk: 0.25
+    route_deviation: 0.10
+    inactivity: 0.10
+    historical_context: 0.10
+    night_flag: 0.05
+    sos: 0.05
+  thresholds:
+    low_max: 0.35
+    moderate_max: 0.65

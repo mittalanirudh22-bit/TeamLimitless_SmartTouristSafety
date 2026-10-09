@@ -1,0 +1,8 @@
+node_modules
+.venv
+.env
+data/raw
+data/tourist_safety.db
+data/processed/geolife_points.csv
+data/processed/mobility_features.csv
+frontend/dist

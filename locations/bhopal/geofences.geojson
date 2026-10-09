@@ -1,0 +1,221 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Old City Heritage Zone",
+    "category": "tourist_zone",
+    "risk_level": 0.1,
+    "description": "Dense, well-patrolled tourist area."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.3855,
+       23.2598
+      ],
+      [
+       77.3975,
+       23.2598
+      ],
+      [
+       77.3975,
+       23.2718
+      ],
+      [
+       77.3855,
+       23.2718
+      ],
+      [
+       77.3855,
+       23.2598
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Upper Lake Promenade",
+    "category": "tourist_zone",
+    "risk_level": 0.1,
+    "description": "Popular walking area."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.338,
+       23.249
+      ],
+      [
+       77.352,
+       23.249
+      ],
+      [
+       77.352,
+       23.263
+      ],
+      [
+       77.338,
+       23.263
+      ],
+      [
+       77.338,
+       23.249
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "New Market Commercial Area",
+    "category": "tourist_zone",
+    "risk_level": 0.15,
+    "description": "Busy shopping district."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.394,
+       23.228
+      ],
+      [
+       77.404,
+       23.228
+      ],
+      [
+       77.404,
+       23.238
+      ],
+      [
+       77.394,
+       23.238
+      ],
+      [
+       77.394,
+       23.228
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Isolated Lake Edge (night)",
+    "category": "high_risk",
+    "risk_level": 0.8,
+    "description": "Poorly lit, isolated at night."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.326,
+       23.246
+      ],
+      [
+       77.334,
+       23.246
+      ],
+      [
+       77.334,
+       23.254
+      ],
+      [
+       77.326,
+       23.254
+      ],
+      [
+       77.326,
+       23.246
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Industrial Belt",
+    "category": "high_risk",
+    "risk_level": 0.7,
+    "description": "Industrial area, low footfall for tourists."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.404,
+       23.276
+      ],
+      [
+       77.416,
+       23.276
+      ],
+      [
+       77.416,
+       23.288
+      ],
+      [
+       77.404,
+       23.288
+      ],
+      [
+       77.404,
+       23.276
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Forest Fringe (Van Vihar edge)",
+    "category": "restricted",
+    "risk_level": 0.6,
+    "description": "Wildlife area, restricted outside hours."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.35199999999999,
+       23.233999999999998
+      ],
+      [
+       77.36,
+       23.233999999999998
+      ],
+      [
+       77.36,
+       23.242
+      ],
+      [
+       77.35199999999999,
+       23.242
+      ],
+      [
+       77.35199999999999,
+       23.233999999999998
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
