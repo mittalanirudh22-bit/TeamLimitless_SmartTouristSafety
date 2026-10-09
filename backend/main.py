@@ -1,4 +1,4 @@
-import hashlib, json
+import hashlib, json, os
 from datetime import datetime, timezone
 from pathlib import Path
 import yaml
@@ -12,7 +12,7 @@ from . import models as m, scoring, simulation
 from .database import ROOT, SessionLocal, engine, get_db
 from .seed import seed
 
-DEFAULT_LOCATION = __import__('os').getenv('DEFAULT_LOCATION', 'bhopal')
+DEFAULT_LOCATION = os.getenv('DEFAULT_LOCATION', 'bhopal')
 app = FastAPI(title='Team Limitless Smart Tourist Safety API', version='3.1.0')
 
 
@@ -213,6 +213,8 @@ def simulate_step(db: Session = Depends(get_db)):
 
 @app.post('/api/simulate/reset')
 def simulate_reset(db: Session = Depends(get_db)):
+    if os.getenv('ALLOW_RESET') != '1':  # wipes incidents and history; off unless explicitly enabled
+        raise HTTPException(403, 'reset disabled')
     for model in (m.IncidentAudit, m.Incident, m.RiskAssessment, m.TouristLocation):
         db.query(model).delete()
     db.commit()

@@ -60,10 +60,9 @@ function App(){
  const t=tourists.find(x=>x.tourist_id===sel);
  const sos=async()=>{if(!t||t.latitude==null)return;await post(`${API}/sos`,{tourist_id:t.tourist_id,latitude:t.latitude,longitude:t.longitude});refresh()};
  const setStatus=async(id,status)=>{await j(`${API}/incidents/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});refresh()};
- const reset=async()=>{await post(`${API}/simulate/reset`);refresh()};
  return <main>
   <header><div><h1>Team Limitless</h1><p>Smart Tourist Safety Monitoring &amp; Incident Response — Bhopal pilot</p></div>
-   <div className="actions"><button onClick={()=>setRun(!running)}>{running?'Pause demo':'Resume demo'}</button><button className="ghost" onClick={reset}>Reset</button></div></header>
+   <div className="actions"><button onClick={()=>setRun(!running)}>{running?'Pause demo':'Resume demo'}</button></div></header>
   {err&&<div className="err">{err}</div>}
   <div className="grid">
    <section className="card wide"><h2>Live Monitoring <small>(replayed demo trajectories)</small></h2>
