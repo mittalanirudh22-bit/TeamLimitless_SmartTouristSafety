@@ -1,6 +1,17 @@
+databases:
+  - name: limitless-db
+    plan: free
+    databaseName: tourist_safety
+    user: limitless
+
 services:
   - type: web
     name: team-limitless-tourist-safety
     runtime: docker
     plan: free
     healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: limitless-db
+          property: connectionString
