@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from . import ledger, models as m, scoring
+from . import ingest, ledger, models as m, scoring
 from .database import get_db
 from .service import finish, incident_out, iso, open_incident, process_fix, queue_block
 
@@ -68,11 +68,19 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     if not body.consent:
         raise HTTPException(400, 'Consent to location tracking is required to register.')
     ip = (request.headers.get('x-forwarded-for') or request.client.host or '?').split(',')[0].strip()
-    now_s = time.time()
-    _hits[ip] = [t for t in _hits.get(ip, []) if now_s - t < 3600]
-    if len(_hits[ip]) >= int(os.getenv('REGISTER_LIMIT_PER_HOUR', '10')):
+    limit, rc = int(os.getenv('REGISTER_LIMIT_PER_HOUR', '10')), ingest.redis_client()
+    if rc is not None:  # shared across every web process
+        n = rc.incr(f'limitless:rl:reg:{ip}')
+        if n == 1:
+            rc.expire(f'limitless:rl:reg:{ip}', 3600)
+        over = n > limit
+    else:
+        now_s = time.time()
+        _hits[ip] = [t for t in _hits.get(ip, []) if now_s - t < 3600]
+        over = len(_hits[ip]) >= limit
+        _hits[ip].append(now_s)
+    if over:
         raise HTTPException(429, 'Too many registrations from this address; try again later.')
-    _hits[ip].append(now_s)
 
     tid = 'TR' + secrets.token_hex(4).upper()
     salt, token = secrets.token_hex(16), secrets.token_urlsafe(24)
@@ -104,6 +112,7 @@ def _set_status(db, who, status, block_type):
         queue_block(db, block_type, t.tourist_id,
                     ledger.sha256(f'{t.tourist_id}|{status}|{datetime.now(timezone.utc).isoformat()}'))
     finish(db)
+    _auth.pop(reg.token_hash, None)
     return profile(db, reg, t)
 
 
@@ -117,16 +126,40 @@ def stop(who=Depends(current_traveller), db: Session = Depends(get_db)):
     return _set_status(db, who, 'STOPPED', 'TRACKING_STOPPED')
 
 
-@router.post('/me/location')
-def location(fix: FixIn, who=Depends(current_traveller), db: Session = Depends(get_db)):
-    reg, t = who
-    if t.status != 'TRACKING':
+_auth: dict[str, tuple[float, str, str]] = {}  # token_hash -> (expires, tourist_id, status); keeps ingest off the DB
+AUTH_TTL = 3.0
+
+
+def traveller_light(x_tracking_token: str | None = Header(None), db: Session = Depends(get_db)):
+    if not x_tracking_token:
+        raise HTTPException(401, 'tracking token required')
+    key, now_s = ledger.sha256(x_tracking_token), time.monotonic()
+    hit = _auth.get(key)
+    if hit and hit[0] > now_s:
+        return hit[1], hit[2]
+    reg = db.query(m.Registration).filter_by(token_hash=key).first()
+    if not reg:
+        raise HTTPException(401, 'invalid tracking token')
+    status = db.get(m.Tourist, reg.tourist_id).status
+    if len(_auth) > 20000:
+        _auth.clear()
+    _auth[key] = (now_s + AUTH_TTL, reg.tourist_id, status)
+    return reg.tourist_id, status
+
+
+@router.post('/me/location', status_code=202)
+def location(fix: FixIn, who=Depends(traveller_light)):
+    """Validate and enqueue; scoring happens in the ingest workers (see ingest.py). Poll /me for the result."""
+    tid, status = who
+    if status != 'TRACKING':
         raise HTTPException(409, 'tracking has not been started')
     if fix.accuracy is not None and fix.accuracy > 150:
         return {'ignored': 'GPS accuracy too low', 'accuracy_m': fix.accuracy}
-    res = process_fix(db, t, fix.latitude, fix.longitude, fix.timestamp or datetime.now(timezone.utc))
-    finish(db)
-    return res
+    try:
+        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat()))
+    except ingest.Backpressure:
+        raise HTTPException(503, 'Server busy; retry shortly.', headers={'Retry-After': '5'})
+    return {'queued': True}
 
 
 @router.post('/me/sos')

@@ -59,6 +59,8 @@ def open_incident(db, tourist_id, kind, severity, lat, lon, desc):
 
 def process_fix(db, tourist, lat, lon, ts: datetime, sos=0.0, hour=None):
     res = scoring.assess(db, tourist, lat, lon, ts, sos=sos, hour=hour)
+    if res.get("duplicate"):
+        return res
     if res['risk_level'] == 'HIGH' and not sos:
         open_incident(db, tourist.tourist_id, 'HIGH_RISK', 'HIGH', lat, lon,
                       f"Risk score {res['risk_score']}" + (f" in {res['geofence']}" if res['geofence'] else ''))

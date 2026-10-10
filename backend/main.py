@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import yaml
 from fastapi import Depends, FastAPI, HTTPException
@@ -7,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
-from . import ledger, models as m, scoring, simulation
+from . import ingest, ledger, models as m, retention, scoring, simulation
 from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
 from .seed import seed, DEMO
 from .service import audit, finish, incident_out, iso, open_incident, process_fix, require_ops
@@ -15,17 +16,25 @@ from .travellers import router as travellers_router
 
 DEFAULT_LOCATION = os.getenv('DEFAULT_LOCATION', 'bhopal')
 DEMO_IDS = [t for t, _ in DEMO]
-app = FastAPI(title='Team Limitless Smart Tourist Safety API', version='4.0.0')
-app.include_router(travellers_router, prefix='/api/travellers')
 
 
-@app.on_event('startup')
-def startup():
+@asynccontextmanager
+async def lifespan(_app):
     m.Base.metadata.create_all(engine)
     ensure_indexes()
     with SessionLocal() as db:
         seed(db, DEFAULT_LOCATION)
     ledger.ensure_genesis()
+    ingest.start()
+    stop_retention = retention.start()
+    yield
+    if stop_retention:
+        stop_retention.set()
+    ingest.stop()  # flush queued fixes before the process exits
+
+
+app = FastAPI(title='Team Limitless Smart Tourist Safety API', version='5.0.0', lifespan=lifespan)
+app.include_router(travellers_router, prefix='/api/travellers')
 
 
 class RiskRequest(BaseModel):
@@ -119,6 +128,12 @@ def verify_id(blockchain_id: str, db: Session = Depends(get_db)):
 
 
 # ---- operator endpoints ----
+@app.get('/api/ingest/stats', dependencies=[Depends(require_ops)])
+def ingest_stats():
+    return ingest.snapshot()
+
+
+
 @app.get('/api/ledger', dependencies=[Depends(require_ops)])
 def ledger_list(limit: int = 25, db: Session = Depends(get_db)):
     rows = db.query(m.LedgerBlock).order_by(m.LedgerBlock.idx.desc()).limit(min(limit, 200)).all()
@@ -126,11 +141,15 @@ def ledger_list(limit: int = 25, db: Session = Depends(get_db)):
 
 
 @app.get('/api/tourists', dependencies=[Depends(require_ops)])
-def tourists(limit: int = 500, db: Session = Depends(get_db)):
-    """Three queries total, independent of fleet size (latest state lives in tourist_state, not the history tables)."""
+def tourists(limit: int = 500, since: datetime | None = None, db: Session = Depends(get_db)):
+    """Three queries total, independent of fleet size (latest state lives in tourist_state, not the history tables).
+    With `since`, only tourists whose state changed after that instant are returned (the dashboard merges them)."""
     limit = max(1, min(limit, 2000))
-    rows = (db.query(m.Tourist).filter_by(location_slug=DEFAULT_LOCATION)
-            .order_by(m.Tourist.created_at, m.Tourist.tourist_id).limit(limit).all())
+    q = db.query(m.Tourist).filter_by(location_slug=DEFAULT_LOCATION)
+    if since is not None:
+        since = since if since.tzinfo else since.replace(tzinfo=timezone.utc)
+        q = q.join(m.TouristState, m.TouristState.tourist_id == m.Tourist.tourist_id).filter(m.TouristState.updated_at > since)
+    rows = q.order_by(m.Tourist.created_at, m.Tourist.tourist_id).limit(limit).all()
     ids = [t.tourist_id for t in rows]
     states = {s.tourist_id: s for s in db.query(m.TouristState).filter(m.TouristState.tourist_id.in_(ids))}
     regs = {r.tourist_id: r for r in db.query(m.Registration).filter(m.Registration.tourist_id.in_(ids))}
@@ -143,12 +162,12 @@ def tourists(limit: int = 500, db: Session = Depends(get_db)):
                         latitude=st.latitude if st else None, longitude=st.longitude if st else None,
                         speed_kmh=st.speed_kmh if st else None, trail=(st.trail or []) if st else [],
                         risk_score=st.risk_score if st else None, risk_level=st.risk_level if st else None,
-                        factors=st.factors if st else None))
+                        factors=st.factors if st else None, updated_at=iso(st.updated_at) if st else None))
     return out
 
 
 @app.post('/api/locations', dependencies=[Depends(require_ops)])
-def ingest(fix: FixIn, db: Session = Depends(get_db)):
+def ingest_demo_fix(fix: FixIn, db: Session = Depends(get_db)):
     t = demo_tourist(db, fix.tourist_id)
     res = process_fix(db, t, fix.latitude, fix.longitude, fix.timestamp or datetime.now(timezone.utc))
     finish(db)

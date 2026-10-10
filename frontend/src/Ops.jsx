@@ -1,4 +1,4 @@
-import React,{useCallback,useEffect,useState} from 'react';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
 import MapView from './MapView.jsx';
 import {COLORS,request} from './api.js';
 
@@ -25,11 +25,19 @@ export default function Ops(){
  const [sel,setSel]=useState(null),[running,setRun]=useState(true),[err,setErr]=useState(null);
  const H={'X-Ops-Token':tok};
  const call=useCallback((u,o={})=>request(u,{...o,headers:{...H,...(o.headers||{})}}),[tok]);
+ const since=useRef(null),tick=useRef(0);
+ // Full snapshot every 15th poll (picks up new registrations and status changes); in between, only tourists whose state changed.
  const refresh=useCallback(async()=>{
   try{
-   const[t,i,b,v]=await Promise.all([call('/api/tourists'),call('/api/incidents'),call('/api/ledger?limit=12'),request('/api/ledger/verify')]);
-   setT(t);setI(i);setC({blocks:b,ok:v});setErr(null);setNeed(false);
-   setSel(s=>s||t[0]?.tourist_id);
+   const full=tick.current++%15===0||!since.current;
+   const [t,i,v]=await Promise.all([call('/api/tourists'+(full?'':`?since=${encodeURIComponent(since.current)}`)),call('/api/incidents'),request('/api/ledger/verify')]);
+   if(full)setT(t);else if(t.length){const by=new Map(t.map(x=>[x.tourist_id,x]));setT(old=>old.map(x=>by.get(x.tourist_id)||x))}
+   const latest=t.map(x=>x.updated_at).filter(Boolean).sort().pop();
+   if(full||latest)since.current=latest&&(!since.current||latest>since.current)?latest:since.current||latest;
+   setI(i);setC(c=>({blocks:c.blocks,ok:v}));
+   if(full||tick.current%5===1)setC({blocks:await call('/api/ledger?limit=12'),ok:v});
+   setErr(null);setNeed(false);
+   if(full)setSel(s=>s||t[0]?.tourist_id);
   }catch(e){if(e.status===401){setNeed(true);setBad(!!tok)}else setErr('API unreachable')}
  },[call,tok]);
  useEffect(()=>{request('/api/geofences').then(setF).catch(()=>{});refresh()},[refresh]);

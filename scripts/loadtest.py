@@ -47,8 +47,16 @@ async def main(a):
         dt = time.time() - t1
         lat.sort()
         q = lambda p: lat[min(len(lat) - 1, int(len(lat) * p))] * 1000 if lat else float('nan')
-        print(f'{len(lat)} fixes ok, {errs} errors in {dt:.1f}s -> {len(lat) / dt:.0f} fixes/s')
-        print(f'latency ms: p50={q(.5):.0f} p95={q(.95):.0f} p99={q(.99):.0f} max={lat[-1] * 1000 if lat else 0:.0f}')
+        print(f'accepted {len(lat)} fixes, {errs} errors in {dt:.1f}s -> {len(lat) / dt:.0f} fixes/s accepted by the API')
+        print(f'API latency ms: p50={q(.5):.0f} p95={q(.95):.0f} p99={q(.99):.0f} max={lat[-1] * 1000 if lat else 0:.0f}')
+        hdr = {'X-Ops-Token': a.ops_token} if a.ops_token else {}
+        st = (await c.get('/api/ingest/stats', headers=hdr)).json()
+        while st.get('queue_depth', 0) > 0 or st.get('handled', 0) < st.get('enqueued', 0):  # wait for the workers to drain
+            await asyncio.sleep(0.05)
+            st = (await c.get('/api/ingest/stats', headers=hdr)).json()
+        total = time.time() - t1
+        print(f'fully processed in {total:.1f}s -> {len(lat) / total:.0f} fixes/s end-to-end '
+              f'(batches={st["batches"]}, errors={st["errors"]}, last batch {st["last_batch_size"]} fixes in {st["last_batch_ms"]} ms)')
         s = time.time()
         r = await c.get('/api/tourists', headers={'X-Ops-Token': a.ops_token} if a.ops_token else {})
         print(f'/api/tourists -> {r.status_code}, {len(r.content) / 1024:.0f} KB in {(time.time() - s) * 1000:.0f} ms')
