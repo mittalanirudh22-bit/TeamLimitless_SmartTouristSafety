@@ -12,7 +12,9 @@ for prefix in ('postgres://', 'postgresql://'):
         DATABASE_URL = 'postgresql+psycopg://' + DATABASE_URL[len(prefix):]
 (ROOT / 'data').mkdir(exist_ok=True)
 connect_args = {'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {}
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
+pool_args = {} if DATABASE_URL.startswith('sqlite') else dict(
+    pool_size=int(os.getenv('DB_POOL_SIZE', '10')), max_overflow=int(os.getenv('DB_MAX_OVERFLOW', '20')), pool_recycle=1800)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args, **pool_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -22,3 +24,19 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# create_all() never adds indexes to tables that already exist, so these are applied idempotently at startup.
+INDEXES = [
+    'CREATE INDEX IF NOT EXISTS ix_tloc_tourist_time ON tourist_locations (tourist_id, recorded_at)',
+    'CREATE INDEX IF NOT EXISTS ix_risk_tourist_time ON risk_assessments (tourist_id, assessed_at)',
+    'CREATE INDEX IF NOT EXISTS ix_incident_tourist_status ON incidents (tourist_id, status)',
+    'CREATE INDEX IF NOT EXISTS ix_ledger_type_ref ON ledger_blocks (block_type, ref)',
+]
+
+
+def ensure_indexes():
+    from sqlalchemy import text
+    with engine.begin() as c:
+        for stmt in INDEXES:
+            c.execute(text(stmt))

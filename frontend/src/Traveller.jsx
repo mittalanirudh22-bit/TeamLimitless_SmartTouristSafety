@@ -59,7 +59,7 @@ function demoStep(s){
 
 function Tracking({token,me,refresh,fences,onStop}){
  const [gps,setGps]=useState('Waiting for GPS…'),[demo,setDemo]=useState(false),[note,setNote]=useState(null);
- const last=useRef(0),pos=useRef(null);
+ const last=useRef(0),sent=useRef(null),pos=useRef(null);
  const send=useCallback(async(lat,lon,accuracy,ts)=>{
   try{
    const body={latitude:lat,longitude:lon,...(accuracy!=null?{accuracy}:{}),...(ts?{timestamp:new Date(ts).toISOString()}:{})};
@@ -78,8 +78,13 @@ function Tracking({token,me,refresh,fences,onStop}){
   if(!navigator.geolocation){setGps('This device has no GPS support. Use demo movement to try it.');return}
   const id=navigator.geolocation.watchPosition(p=>{
    setGps(`GPS active (±${Math.round(p.coords.accuracy)} m)`);
-   if(Date.now()-last.current<5000)return;
-   last.current=Date.now();send(p.coords.latitude,p.coords.longitude,p.coords.accuracy);
+   // Adaptive rate: at most one fix per 5 s while moving; a stationary phone sends a heartbeat every 30 s
+   // (enough to keep inactivity detection correct) instead of a fix every few seconds.
+   const now=Date.now(),{latitude:la,longitude:lo,accuracy:ac}=p.coords,prev=sent.current;
+   if(now-last.current<5000)return;
+   const moved=prev?Math.hypot((la-prev.la)*111000,(lo-prev.lo)*111000*Math.cos(la*Math.PI/180)):Infinity;
+   if(moved<10&&now-last.current<30000)return;
+   last.current=now;sent.current={la,lo};send(la,lo,ac);
   },e=>setGps(e.code===1?'Location permission denied — allow it in your browser settings, or use demo movement.':'GPS unavailable: '+e.message),
   {enableHighAccuracy:true,maximumAge:2000,timeout:20000});
   return()=>navigator.geolocation.clearWatch(id);

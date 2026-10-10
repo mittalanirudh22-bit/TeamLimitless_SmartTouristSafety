@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
 from . import ledger, models as m, scoring, simulation
-from .database import ROOT, SessionLocal, engine, get_db
+from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
 from .seed import seed, DEMO
 from .service import audit, finish, incident_out, iso, open_incident, process_fix, require_ops
 from .travellers import router as travellers_router
@@ -22,6 +22,7 @@ app.include_router(travellers_router, prefix='/api/travellers')
 @app.on_event('startup')
 def startup():
     m.Base.metadata.create_all(engine)
+    ensure_indexes()
     with SessionLocal() as db:
         seed(db, DEFAULT_LOCATION)
     ledger.ensure_genesis()
@@ -125,23 +126,24 @@ def ledger_list(limit: int = 25, db: Session = Depends(get_db)):
 
 
 @app.get('/api/tourists', dependencies=[Depends(require_ops)])
-def tourists(db: Session = Depends(get_db)):
+def tourists(limit: int = 500, db: Session = Depends(get_db)):
+    """Three queries total, independent of fleet size (latest state lives in tourist_state, not the history tables)."""
+    limit = max(1, min(limit, 2000))
+    rows = (db.query(m.Tourist).filter_by(location_slug=DEFAULT_LOCATION)
+            .order_by(m.Tourist.created_at, m.Tourist.tourist_id).limit(limit).all())
+    ids = [t.tourist_id for t in rows]
+    states = {s.tourist_id: s for s in db.query(m.TouristState).filter(m.TouristState.tourist_id.in_(ids))}
+    regs = {r.tourist_id: r for r in db.query(m.Registration).filter(m.Registration.tourist_id.in_(ids))}
     out = []
-    regs = {r.tourist_id: r for r in db.query(m.Registration)}
-    for t in db.query(m.Tourist).filter_by(location_slug=DEFAULT_LOCATION).order_by(m.Tourist.created_at, m.Tourist.tourist_id):
-        loc = db.query(m.TouristLocation).filter_by(tourist_id=t.tourist_id).order_by(m.TouristLocation.recorded_at.desc()).first()
-        ra = db.query(m.RiskAssessment).filter_by(tourist_id=t.tourist_id).order_by(m.RiskAssessment.assessed_at.desc()).first()
-        trail = [[r.latitude, r.longitude] for r in db.query(m.TouristLocation).filter_by(tourist_id=t.tourist_id)
-                 .order_by(m.TouristLocation.recorded_at.desc()).limit(40)][::-1]
-        reg = regs.get(t.tourist_id)
+    for t in rows:
+        st, reg = states.get(t.tourist_id), regs.get(t.tourist_id)
         out.append(dict(tourist_id=t.tourist_id, name=t.display_name, status=t.status, registered=reg is not None,
                         blockchain_id=reg.blockchain_id if reg else None,
                         emergency_name=reg.emergency_name if reg else None, emergency_phone=reg.emergency_phone if reg else None,
-                        latitude=loc.latitude if loc else None, longitude=loc.longitude if loc else None,
-                        speed_kmh=loc.speed_kmh if loc else None, trail=trail,
-                        risk_score=ra.risk_score if ra else None, risk_level=ra.risk_level if ra else None,
-                        factors={k: getattr(ra, k) for k in ('movement_anomaly', 'geofence_risk', 'route_deviation', 'inactivity',
-                                                             'historical_context', 'night_flag', 'sos')} if ra else None))
+                        latitude=st.latitude if st else None, longitude=st.longitude if st else None,
+                        speed_kmh=st.speed_kmh if st else None, trail=(st.trail or []) if st else [],
+                        risk_score=st.risk_score if st else None, risk_level=st.risk_level if st else None,
+                        factors=st.factors if st else None))
     return out
 
 
@@ -218,7 +220,7 @@ def simulate_step(db: Session = Depends(get_db)):
 def simulate_reset(db: Session = Depends(get_db)):
     if os.getenv('ALLOW_RESET') != '1':  # wipes incidents and history; off unless explicitly enabled
         raise HTTPException(403, 'reset disabled')
-    for model in (m.IncidentAudit, m.Incident, m.RiskAssessment, m.TouristLocation):
+    for model in (m.IncidentAudit, m.Incident, m.RiskAssessment, m.TouristLocation, m.TouristState):
         db.query(model).delete()
     db.commit()
     simulation.reset()

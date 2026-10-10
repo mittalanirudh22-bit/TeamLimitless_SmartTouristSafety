@@ -1,5 +1,5 @@
 """Traveller-facing API: register -> blockchain ID -> opt-in tracking."""
-import hashlib, json, secrets, time
+import hashlib, json, os, secrets, time
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -51,20 +51,16 @@ def current_traveller(x_tracking_token: str | None = Header(None), db: Session =
 
 
 def profile(db, reg, t):
-    ra = db.query(m.RiskAssessment).filter_by(tourist_id=t.tourist_id).order_by(m.RiskAssessment.assessed_at.desc()).first()
-    rows = (db.query(m.TouristLocation).filter_by(tourist_id=t.tourist_id)
-            .order_by(m.TouristLocation.recorded_at.desc()).limit(60).all())
+    st = db.get(m.TouristState, t.tourist_id)
     inc = db.query(m.Incident).filter(m.Incident.tourist_id == t.tourist_id, m.Incident.status != 'RESOLVED').all()
     return dict(
         tourist_id=t.tourist_id, name=reg.full_name, nationality=reg.nationality, status=t.status,
         blockchain_id=reg.blockchain_id, registered_at=iso(reg.registered_at),
         emergency_name=reg.emergency_name, emergency_phone=reg.emergency_phone,
-        latitude=rows[0].latitude if rows else None, longitude=rows[0].longitude if rows else None,
-        trail=[[r.latitude, r.longitude] for r in rows][::-1],
-        risk_score=ra.risk_score if ra else None, risk_level=ra.risk_level if ra else None,
-        factors={k: getattr(ra, k) for k in ('movement_anomaly', 'geofence_risk', 'route_deviation', 'inactivity',
-                                             'historical_context', 'night_flag', 'sos')} if ra else None,
-        incidents=[incident_out(i) for i in inc])
+        latitude=st.latitude if st else None, longitude=st.longitude if st else None,
+        trail=(st.trail or []) if st else [],
+        risk_score=st.risk_score if st else None, risk_level=st.risk_level if st else None,
+        factors=st.factors if st else None, incidents=[incident_out(i) for i in inc])
 
 
 @router.post('/register')
@@ -74,7 +70,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     ip = (request.headers.get('x-forwarded-for') or request.client.host or '?').split(',')[0].strip()
     now_s = time.time()
     _hits[ip] = [t for t in _hits.get(ip, []) if now_s - t < 3600]
-    if len(_hits[ip]) >= 10:
+    if len(_hits[ip]) >= int(os.getenv('REGISTER_LIMIT_PER_HOUR', '10')):
         raise HTTPException(429, 'Too many registrations from this address; try again later.')
     _hits[ip].append(now_s)
 

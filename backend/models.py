@@ -141,3 +141,19 @@ class LedgerBlock(Base):
     payload_hash = Column(String, nullable=False)
     prev_hash = Column(String, nullable=False)
     hash = Column(String, unique=True, nullable=False)
+
+
+class TouristState(Base):
+    """Latest-known state per tourist (one row each). Scoring reads the previous fixes from here by primary key
+    and the dashboards read it directly, so neither has to scan the ever-growing history tables."""
+    __tablename__ = 'tourist_state'
+    tourist_id = Column(String, ForeignKey('tourists.tourist_id'), primary_key=True)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    speed_kmh = Column(Float)
+    updated_at = Column(DateTime(timezone=True))
+    risk_score = Column(Float)
+    risk_level = Column(String)
+    factors = Column(JSON)
+    trail = Column(JSON)   # last ~40 [lat, lon] points, oldest first
+    recent = Column(JSON)  # last 3 fixes with derived features, oldest first

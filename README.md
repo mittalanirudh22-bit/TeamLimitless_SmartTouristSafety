@@ -45,3 +45,8 @@ Deploy anywhere that runs Docker: `docker build -t limitless . && docker run -p 
 - `/#/ops` — operator dashboard (live map, incidents, ledger). Protected by the `OPS_TOKEN` env var when set; open when unset (local dev).
 - The "blockchain" is a private SHA-256 hash chain in the database (`backend/ledger.py`): registrations, tracking start/stop and incident events are chained; only salted hashes are stored, never personal data. It detects silent edits but is not a public chain.
 - Browser GPS needs HTTPS (Render provides it) or localhost. "Use demo movement" simulates a walk for testing.
+
+## Performance & load testing
+`python scripts/loadtest.py --travellers 100 --fixes 30 --concurrency 64` registers test travellers and streams GPS fixes (run it only against a local or throwaway deployment; set `REGISTER_LIMIT_PER_HOUR=100000` on the server). `python -m pytest tests` runs the regression suite (`pip install -r requirements-dev.txt`).
+
+Measured locally (1 worker, SQLite, 64 concurrent clients): **97 -> ~670 fixes/s**, p50 207 -> ~88 ms. What changed: a vectorised IsolationForest scorer (`ml/fast_iforest.py`, exact match to sklearn, ~55x faster per call), cached geofences/crime context, a `tourist_state` table so scoring and dashboards read one row per tourist instead of scanning history, and indexes. Postgres numbers will differ (network round trips) and have not been measured yet.

@@ -7,6 +7,7 @@ if you need stronger guarantees.
 """
 import hashlib, threading
 from datetime import datetime, timezone
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from . import models as m
 from .database import SessionLocal
@@ -26,6 +27,8 @@ def block_hash(idx, ts, block_type, ref, payload_hash, prev_hash):
 def append(block_type: str, ref: str, payload_hash: str) -> m.LedgerBlock:
     """Append in its own short transaction so concurrent requests can't race on the chain index."""
     with _lock, SessionLocal() as s:
+        if s.bind.dialect.name == 'postgresql':  # the thread lock only covers this process; this covers all of them
+            s.execute(text('SELECT pg_advisory_xact_lock(7001)'))
         last = s.query(m.LedgerBlock).order_by(m.LedgerBlock.idx.desc()).first()
         idx = last.idx + 1 if last else 0
         prev = last.hash if last else GENESIS

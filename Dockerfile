@@ -22,4 +22,5 @@ RUN mkdir -p data/processed \
  && rm -rf data/raw data/processed/geolife_points.csv data/processed/mobility_features.csv
 COPY --from=web /web/dist frontend/dist
 ENV PORT=8000
-CMD ["sh","-c","uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]
+# WEB_CONCURRENCY>1 needs Postgres (ledger lock) and disables the single-process demo replay.
+CMD ["sh","-c","uvicorn backend.main:app --host 0.0.0.0 --port ${PORT} --workers ${WEB_CONCURRENCY:-1}"]
