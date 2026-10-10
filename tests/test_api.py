@@ -233,3 +233,92 @@ def test_redis_backend_orders_acks_and_recovers():
     finally:
         ingest.safe_process = real_safe
         ingest.CLAIM_IDLE_MS, ingest.CLAIM_EVERY_S = 60000, 30
+
+
+def test_redis_shards_have_a_single_owner_and_hand_over():
+    """With several consumers, each shard is consumed by exactly one (per-tourist ordering), and hands over on stop."""
+    import fakeredis, time
+    r = fakeredis.FakeRedis()
+    seen, real_safe = [], ingest.safe_process
+    ingest.safe_process = lambda entries: seen.extend(entries)
+    try:
+        a, b = ingest.RedisBackend(r, consumer='A'), ingest.RedisBackend(r, consumer='B')
+        a.start(); b.start()
+        time.sleep(0.5)
+        owners = [r.get(f'limitless:lease:{i}').decode() for i in range(ingest.SHARDS)]
+        assert all(o in ('A', 'B') for o in owners)
+        tids = [f'TRO{i}' for i in range(6)]
+        for n in range(20):
+            for t in tids:
+                a.put(dict(tid=t, lat=1, lon=1, ts=f'2026-10-17T10:00:{n:02d}+00:00'))
+        deadline = time.time() + 5
+        while len(seen) < 120 and time.time() < deadline:
+            time.sleep(0.05)
+        assert len(seen) == 120
+        for t in tids:  # strictly in order per tourist
+            ts = [e['ts'] for e in seen if e['tid'] == t]
+            assert ts == sorted(ts)
+        a.stop(2)  # A's shards are released and B takes them over
+        deadline = time.time() + 5
+        while time.time() < deadline and any(r.get(f'limitless:lease:{i}') != b'B' for i in range(ingest.SHARDS)):
+            time.sleep(0.1)
+        assert all(r.get(f'limitless:lease:{i}') == b'B' for i in range(ingest.SHARDS))
+        b.stop(2)
+    finally:
+        ingest.safe_process = real_safe
+
+
+def test_redis_down_falls_back_and_enqueue_failure_is_503(client, traveller, monkeypatch):
+    class Dead:
+        def __getattr__(self, name):
+            raise ConnectionError('redis is down')
+    monkeypatch.setattr(ingest, 'redis_client', lambda: Dead())
+    saved = ingest._backend
+    try:
+        be = ingest.start(embedded_workers=False)
+        assert be.name.startswith('memory')  # boot did not crash
+    finally:
+        ingest._backend = saved
+    # a backend that dies after boot: clients get 503 + Retry-After, not a 500
+    class Broken:
+        name = 'broken'
+        def put(self, e): raise ConnectionError('redis went away')
+        def depth(self): return 0
+    monkeypatch.setattr(ingest, '_backend', Broken())
+    _, h = traveller
+    client.post('/api/travellers/me/start', headers=h)
+    resp = _fix(client, h, 23.25, 77.35, '2026-10-18T10:00:00Z')
+    assert resp.status_code == 503 and resp.headers['retry-after']
+
+
+def test_embedded_consumers_yield_to_a_live_worker_and_resume_without_it():
+    import fakeredis, time
+    r = fakeredis.FakeRedis()
+    seen, real_safe, real_ttl = [], ingest.safe_process, ingest.WORKER_TTL_MS
+    ingest.safe_process = lambda entries: seen.extend((e['tid'], e['ts']) for e in entries)
+    ingest.WORKER_TTL_MS = 1500
+    try:
+        web = ingest.RedisBackend(r, consumer='web', role='embedded')
+        web.start()
+        web._ded_checked = 0
+        for n in range(4):
+            web.put(dict(tid='TRW', lat=1, lon=1, ts=f'2026-10-19T10:00:0{n}+00:00'))
+        time.sleep(1.0)
+        assert len(seen) == 4  # no worker yet: the web tier consumes
+        worker = ingest.RedisBackend(r, consumer='w', role='worker')
+        worker.start()
+        time.sleep(3.5)  # web notices the heartbeat and releases every shard; the worker owns them all
+        assert all(r.get(f'limitless:lease:{i}') == b'w' for i in range(ingest.SHARDS))
+        seen.clear()
+        web.put(dict(tid='TRW', lat=1, lon=1, ts='2026-10-19T10:01:00+00:00'))
+        time.sleep(1.0)
+        assert seen == [('TRW', '2026-10-19T10:01:00+00:00')]  # consumed exactly once, by the worker
+        worker.stop(2)  # worker dies: heartbeat expires, web takes the shards back
+        time.sleep(1.8 + 3)
+        seen.clear()
+        web.put(dict(tid='TRW', lat=1, lon=1, ts='2026-10-19T10:02:00+00:00'))
+        time.sleep(1.5)
+        assert seen == [('TRW', '2026-10-19T10:02:00+00:00')]
+        web.stop(2)
+    finally:
+        ingest.safe_process, ingest.WORKER_TTL_MS = real_safe, real_ttl

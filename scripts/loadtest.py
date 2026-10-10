@@ -51,12 +51,15 @@ async def main(a):
         print(f'API latency ms: p50={q(.5):.0f} p95={q(.95):.0f} p99={q(.99):.0f} max={lat[-1] * 1000 if lat else 0:.0f}')
         hdr = {'X-Ops-Token': a.ops_token} if a.ops_token else {}
         st = (await c.get('/api/ingest/stats', headers=hdr)).json()
-        while st.get('queue_depth', 0) > 0 or st.get('handled', 0) < st.get('enqueued', 0):  # wait for the workers to drain
+        # In-process workers: wait until this process has handled everything it enqueued. With Redis the consumers are other
+        # processes (their counters are not visible here); a fix leaves the stream only after it is committed, so depth 0 = drained.
+        remote = st.get('backend') == 'redis'
+        while st.get('queue_depth', 0) > 0 or (not remote and st.get('handled', 0) < st.get('enqueued', 0)):
             await asyncio.sleep(0.05)
             st = (await c.get('/api/ingest/stats', headers=hdr)).json()
         total = time.time() - t1
         print(f'fully processed in {total:.1f}s -> {len(lat) / total:.0f} fixes/s end-to-end '
-              f'(batches={st["batches"]}, errors={st["errors"]}, last batch {st["last_batch_size"]} fixes in {st["last_batch_ms"]} ms)')
+              f'(backend={st["backend"]}, web-process batches={st["batches"]}, errors={st["errors"]})')
         s = time.time()
         r = await c.get('/api/tourists', headers={'X-Ops-Token': a.ops_token} if a.ops_token else {})
         print(f'/api/tourists -> {r.status_code}, {len(r.content) / 1024:.0f} KB in {(time.time() - s) * 1000:.0f} ms')

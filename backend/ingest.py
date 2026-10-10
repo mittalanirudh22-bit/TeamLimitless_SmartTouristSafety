@@ -4,9 +4,12 @@
   Queued fixes are lost if the process dies (acceptable for position updates; SOS never goes through here).
 * With REDIS_URL set, fixes go through Redis Streams (consumer groups, ack after commit = at-least-once; duplicates are
   dropped by timestamp). Run extra consumers with `python -m backend.worker` and set INGEST_EMBEDDED_WORKERS=0 on the web tier.
-* Shards are chosen by crc32(tourist_id), so one tourist's fixes always go through one consumer, in order.
+* Shards are chosen by crc32(tourist_id). With Redis, each shard is owned by one consumer at a time through a short renewable
+  lease, so one tourist's fixes are processed in order even with many consumers (web instances + workers); consumers beyond
+  the shard count simply stand by as hot spares. Dedicated workers (`python -m backend.worker`) publish a heartbeat; while
+  one is alive the web tier's embedded consumers stand by, and they resume on their own if every worker dies. Use more shards than consumers (INGEST_SHARDS, default 2; 4+ on Render).
 """
-import json, logging, os, queue, threading, time, zlib
+import json, logging, os, queue, socket, threading, time, zlib
 from datetime import datetime, timezone
 from . import models as m, scoring
 from .database import SessionLocal
@@ -17,6 +20,8 @@ SHARDS = int(os.getenv('INGEST_SHARDS', '2'))
 BATCH_MAX = int(os.getenv('INGEST_BATCH_MAX', '500'))
 BATCH_WAIT = float(os.getenv('INGEST_BATCH_WAIT_MS', '25')) / 1000
 MAX_QUEUE = int(os.getenv('INGEST_MAX_QUEUE', '50000'))  # per backend; above this the API sheds load with 503
+WORKER_TTL_MS = int(os.getenv('INGEST_WORKER_TTL_MS', '20000'))  # dedicated-worker heartbeat lifetime
+LEASE_MS = int(os.getenv('INGEST_LEASE_MS', '15000'))  # a shard is consumed by exactly one consumer at a time
 CLAIM_IDLE_MS = int(os.getenv('INGEST_CLAIM_IDLE_MS', '60000'))  # re-deliver fixes a dead consumer never acked
 CLAIM_EVERY_S = float(os.getenv('INGEST_CLAIM_EVERY_S', '30'))
 STREAM = 'limitless:fixes:'
@@ -119,8 +124,9 @@ class MemoryBackend:
 class RedisBackend:
     name = 'redis'
 
-    def __init__(self, client, consumer=None):
-        self.r, self.consumer = client, consumer or f'c-{os.getpid()}'
+    def __init__(self, client, consumer=None, role='embedded'):
+        self.r, self.consumer, self.role = client, consumer or f'{socket.gethostname()}-{os.getpid()}', role
+        self._ded_checked, self._ded_alive = 0.0, False
         self.threads, self.stopping = [], threading.Event()
         for i in range(SHARDS):
             try:
@@ -137,17 +143,50 @@ class RedisBackend:
     def depth(self):
         return sum(self.r.xlen(STREAM + str(i)) for i in range(SHARDS))
 
+    def _dedicated_alive(self):
+        """Is any stand-alone worker heartbeating? Cached for 2 s so consumers don't hammer Redis."""
+        if time.monotonic() - self._ded_checked > 2:
+            self._ded_checked = time.monotonic()
+            self._ded_alive = any(True for _ in self.r.scan_iter(match='limitless:worker:*', count=100))
+        return self._ded_alive
+
+    def _hold(self, i):
+        """Acquire or renew the lease on shard i. False means another consumer owns it."""
+        k = f'limitless:lease:{i}'
+        if self.r.set(k, self.consumer, nx=True, px=LEASE_MS):
+            return True
+        cur = self.r.get(k)
+        if cur is not None and cur.decode() == self.consumer:
+            self.r.pexpire(k, LEASE_MS)
+            return True
+        return False
+
+    def _release(self, i):
+        k = f'limitless:lease:{i}'
+        cur = self.r.get(k)
+        if cur is not None and cur.decode() == self.consumer:
+            self.r.delete(k)
+
     def start(self, shards=None):
         for i in (range(SHARDS) if shards is None else shards):
-            th = threading.Thread(target=self._loop, args=(STREAM + str(i),), daemon=True, name=f'ingest-redis-{i}')
+            th = threading.Thread(target=self._loop, args=(STREAM + str(i), i), daemon=True, name=f'ingest-redis-{i}')
             th.start()
             self.threads.append(th)
 
-    def _loop(self, key):
+    def _loop(self, key, shard):
         # Recover anything a crashed consumer read but never acked, then switch to new messages.
         pending, last_claim = '0', time.monotonic()
         while not self.stopping.is_set():
             try:
+                if self.role == 'worker':
+                    self.r.set(f'limitless:worker:{self.consumer}', 1, px=WORKER_TTL_MS)
+                elif self._dedicated_alive():  # a real worker is up: hand the shard over and stand by
+                    self._release(shard)
+                    self.stopping.wait(1)
+                    continue
+                if not self._hold(shard):  # someone else owns this shard; stand by and retry
+                    self.stopping.wait(1)
+                    continue
                 if time.monotonic() - last_claim > CLAIM_EVERY_S:
                     last_claim = time.monotonic()
                     claimed = self.r.xautoclaim(key, GROUP, self.consumer, min_idle_time=CLAIM_IDLE_MS, start_id='0-0', count=BATCH_MAX)[1]
@@ -168,6 +207,10 @@ class RedisBackend:
             except Exception:
                 log.exception('redis consumer error')
                 time.sleep(1)
+        try:
+            self._release(shard)  # hand the shard over immediately instead of waiting for the lease to expire
+        except Exception:
+            pass
 
     def stop(self, timeout=15):
         self.stopping.set()
@@ -188,8 +231,15 @@ def redis_client():
 
 def start(embedded_workers=None):
     global _backend
-    client = redis_client()
-    _backend = RedisBackend(client) if client else MemoryBackend()
+    _backend = None
+    try:
+        client = redis_client()
+        _backend = RedisBackend(client) if client else MemoryBackend()
+    except Exception:
+        # A Redis outage at boot must not take the API down: degrade to the in-process queue, loudly.
+        log.exception('Redis unavailable at startup; falling back to the in-process queue')
+        _backend = MemoryBackend()
+        _backend.name = 'memory (redis unavailable)'
     if embedded_workers is None:
         embedded_workers = os.getenv('INGEST_EMBEDDED_WORKERS', '1') == '1'
     if embedded_workers:
@@ -205,10 +255,12 @@ def stop():
 def enqueue(entry):
     try:
         _backend.put(entry)
-    except Backpressure:
+    except Exception as e:  # queue full, or the backend (e.g. Redis) is unreachable: ask the client to retry
         with _stats_lock:
-            stats['rejected'] += 1
-        raise
+            stats['rejected' if isinstance(e, Backpressure) else 'errors'] += 1
+        if not isinstance(e, Backpressure):
+            log.exception('enqueue failed')
+        raise Backpressure() from e
     with _stats_lock:
         stats['enqueued'] += 1
 

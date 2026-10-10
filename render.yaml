@@ -18,3 +18,38 @@ services:
       # Operator dashboard password. Render generates it once; read it under the service's Environment tab.
       - key: OPS_TOKEN
         generateValue: true
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: limitless-redis
+          property: connectionString
+      - key: INGEST_SHARDS
+        value: "4"
+      # Embedded consumers stay on as a safety net: they stand by while the worker below is alive and take over
+      # automatically if it stops, so tracking keeps working even if the worker is down or never created.
+
+  # Redis-compatible queue for GPS fixes. noeviction: a full queue must reject new fixes, never silently drop queued ones.
+  - type: keyvalue
+    name: limitless-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []  # internal connections only
+
+  # Dedicated ingest consumer. Background workers have no free plan on Render: this service is billed.
+  - type: worker
+    name: limitless-ingest-worker
+    runtime: docker
+    plan: starter
+    dockerCommand: python -m backend.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: limitless-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: limitless-redis
+          property: connectionString
+      - key: INGEST_SHARDS
+        value: "4"
