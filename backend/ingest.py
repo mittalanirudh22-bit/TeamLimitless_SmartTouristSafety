@@ -265,6 +265,17 @@ def enqueue(entry):
         stats['enqueued'] += 1
 
 
+def public_status():
+    """Non-sensitive summary for /api/info: which queue is active and whether a dedicated worker is consuming."""
+    out = dict(backend=_backend.name if _backend else None, shards=SHARDS)
+    if isinstance(_backend, RedisBackend):
+        try:
+            out['dedicated_worker_alive'] = _backend._dedicated_alive()
+        except Exception:
+            out['dedicated_worker_alive'] = None  # Redis unreachable right now
+    return out
+
+
 def snapshot():
     return dict(backend=_backend.name if _backend else None, queue_depth=_backend.depth() if _backend else 0,
                 shards=SHARDS, **stats)

@@ -322,3 +322,8 @@ def test_embedded_consumers_yield_to_a_live_worker_and_resume_without_it():
         web.stop(2)
     finally:
         ingest.safe_process, ingest.WORKER_TTL_MS = real_safe, real_ttl
+
+
+def test_info_reports_queue_backend(client):
+    info = client.get('/api/info').json()
+    assert info['ingest']['backend'] == 'memory' and info['ingest']['shards'] == ingest.SHARDS

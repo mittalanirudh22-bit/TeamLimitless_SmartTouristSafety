@@ -80,7 +80,7 @@ def demo_tourist(db, tid):
 def info():
     return {'project': 'Team Limitless', 'status': 'running', 'pilot_location': 'Bhopal', 'design': 'location-agnostic',
             'model_loaded': scoring.model_bundle() is not None, 'database': engine.dialect.name,
-            'ops_auth': bool(os.getenv('OPS_TOKEN'))}
+            'ops_auth': bool(os.getenv('OPS_TOKEN')), 'ingest': ingest.public_status()}
 
 
 @app.get('/health')
