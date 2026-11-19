@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
-from . import guide, ingest, ledger, models as m, retention, scoring, simulation
+from . import guide, ingest, ledger, models as m, retention, scoring, simulation, watchdog
 from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
 from .seed import seed_all, DEMO
 from .service import audit, finish, incident_out, iso, open_incident, process_fix, require_ops
@@ -27,9 +27,11 @@ async def lifespan(_app):
     ledger.ensure_genesis()
     ingest.start()
     stop_retention = retention.start()
+    stop_watchdog = watchdog.start()
     yield
-    if stop_retention:
-        stop_retention.set()
+    for stop in (stop_retention, stop_watchdog):
+        if stop:
+            stop.set()
     ingest.stop()  # flush queued fixes before the process exits
 
 
@@ -160,7 +162,7 @@ def tourists(limit: int = 500, since: datetime | None = None, city: str | None =
     ids = [t.tourist_id for t in rows]
     states = {s.tourist_id: s for s in db.query(m.TouristState).filter(m.TouristState.tourist_id.in_(ids))}
     regs = {r.tourist_id: r for r in db.query(m.Registration).filter(m.Registration.tourist_id.in_(ids))}
-    out = []
+    out, now = [], datetime.now(timezone.utc)
     for t in rows:
         st, reg = states.get(t.tourist_id), regs.get(t.tourist_id)
         out.append(dict(tourist_id=t.tourist_id, name=t.display_name, status=t.status, registered=reg is not None, city=t.location_slug,
@@ -169,7 +171,8 @@ def tourists(limit: int = 500, since: datetime | None = None, city: str | None =
                         latitude=st.latitude if st else None, longitude=st.longitude if st else None,
                         speed_kmh=st.speed_kmh if st else None, trail=(st.trail or []) if st else [],
                         risk_score=st.risk_score if st else None, risk_level=st.risk_level if st else None,
-                        factors=st.factors if st else None, updated_at=iso(st.updated_at) if st else None))
+                        factors=st.factors if st else None, updated_at=iso(st.updated_at) if st else None,
+                        last_seen_s=watchdog.silent_for(st, now), signal=watchdog.signal(st, t.status, now)))
     return out
 
 

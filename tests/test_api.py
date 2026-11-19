@@ -6,6 +6,7 @@ _db = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
 os.environ['DATABASE_URL'] = f'sqlite:///{_db.name}'
 os.environ['OPS_TOKEN'] = 'test-ops'
 os.environ['REGISTER_LIMIT_PER_HOUR'] = '1000'
+os.environ['WATCHDOG_INTERVAL_S'] = '0'  # tests drive the signal-lost watchdog directly
 
 from fastapi.testclient import TestClient  # noqa: E402
 from backend.main import app  # noqa: E402
@@ -386,3 +387,50 @@ def test_risk_thresholds_come_from_config():
     sig = dict(movement_anomaly=0.5, geofence_risk=0, route_deviation=0, inactivity=0, historical_context=0, night_flag=0, sos=0)
     assert calculate_risk(**sig).level == 'LOW'  # 0.175 with the default cut-offs
     assert calculate_risk(**sig, thresholds={'low_max': 0.1, 'moderate_max': 0.15}).level == 'HIGH'
+
+
+def test_watchdog_flags_silent_phones_and_clears_when_signal_returns(client):
+    """Phone goes quiet while tracking: alert sooner where it's risky, flag a dead battery, never alert after Stop."""
+    from datetime import datetime, timedelta, timezone
+    from backend import watchdog
+    from backend.database import SessionLocal
+    base = datetime(2026, 11, 2, 6, 30, tzinfo=timezone.utc)  # 12:00 in Shillong, so "night" plays no part
+
+    def tracked(lat, lon, battery=None):
+        r = client.post('/api/travellers/register', json={**BODY, 'city': 'shillong'}).json()
+        h = {'X-Tracking-Token': r['tracking_token']}
+        client.post('/api/travellers/me/start', headers=h)
+        client.post('/api/travellers/me/location', headers=h,
+                    json={'latitude': lat, 'longitude': lon, 'timestamp': base.isoformat(), **({'battery': battery} if battery is not None else {})})
+        return r['tourist_id'], h
+
+    calm, _ = tracked(25.5762, 91.8856, battery=70)        # Ward's Lake, a calm zone
+    risky, hr = tracked(25.4680, 91.9300, battery=80)      # inside the Laitlum cliff-edge zone
+    dead, _ = tracked(25.4680, 91.9300, battery=4)
+    stopped, hs = tracked(25.4680, 91.9300, battery=60)
+    assert ingest.wait_idle()
+    client.post('/api/travellers/me/stop', headers=hs)
+
+    def check(minutes):
+        with SessionLocal() as db:
+            return {o['tourist_id']: o for o in watchdog.check(db, base + timedelta(minutes=minutes))}
+
+    first = check(7)  # past the risky threshold (5 min), not the normal one (10 min)
+    assert first[risky]['severity'] == 'HIGH' and 'Laitlum' in first[risky]['description']
+    assert first[dead]['severity'] == 'MEDIUM' and 'dead phone' in first[dead]['description']
+    assert calm not in first and stopped not in first
+    later = check(11)
+    assert later[calm]['severity'] == 'MEDIUM' and risky not in later  # one incident per silence, not one per pass
+    assert stopped not in later
+
+    rows = {t['tourist_id']: t for t in client.get('/api/tourists?city=shillong', headers=OPS).json()}
+    assert rows[calm]['signal'] == 'LOST' and rows[stopped]['signal'] is None
+
+    open_ = lambda tid: [i for i in client.get('/api/incidents', headers=OPS).json()
+                         if i['tourist_id'] == tid and i['incident_type'] == 'SIGNAL_LOST' and i['status'] != 'RESOLVED']
+    assert open_(risky)
+    client.post('/api/travellers/me/location', headers=hr,
+                json={'latitude': 25.4690, 'longitude': 91.9310, 'timestamp': (base + timedelta(minutes=12)).isoformat()})
+    assert ingest.wait_idle()
+    assert not open_(risky)  # signal back: incident closed automatically
+    assert client.get('/api/ledger/verify').json()['valid']

@@ -58,10 +58,13 @@ function demoStep(s,T){
 
 function Tracking({token,me,refresh,fences,onStop,guide}){
  const [gps,setGps]=useState('Waiting for GPS…'),[demo,setDemo]=useState(false),[note,setNote]=useState(null);
- const last=useRef(0),sent=useRef(null),pos=useRef(null);
+ const last=useRef(0),sent=useRef(null),pos=useRef(null),batt=useRef(null);
+ // Battery level travels with each fix, so if the phone goes silent the safety team can tell a dead battery from trouble.
+ useEffect(()=>{let b0;navigator.getBattery?.().then(b=>{b0=b;const f=()=>{batt.current=Math.round(b.level*100)};f();b.addEventListener('levelchange',f)}).catch(()=>{});
+  return()=>{try{b0&&(b0.onlevelchange=null)}catch{}}},[]);
  const send=useCallback(async(lat,lon,accuracy,ts)=>{
   try{
-   const body={latitude:lat,longitude:lon,...(accuracy!=null?{accuracy}:{}),...(ts?{timestamp:new Date(ts).toISOString()}:{})};
+   const body={latitude:lat,longitude:lon,...(accuracy!=null?{accuracy}:{}),...(ts?{timestamp:new Date(ts).toISOString()}:{}),...(batt.current!=null?{battery:batt.current}:{})};
    const r=await request('/api/travellers/me/location',{method:'POST',body,headers:{'X-Tracking-Token':token}});
    if(r.ignored)setGps(`Weak GPS signal (±${Math.round(r.accuracy_m)} m) — fix skipped`);
   }catch(e){setGps(`Could not send location: ${e.message}`)}
@@ -113,6 +116,7 @@ function Tracking({token,me,refresh,fences,onStop,guide}){
    {note&&<p className="note">{note}</p>}
    <label className="check"><input type="checkbox" checked={demo} onChange={e=>setDemo(e.target.checked)}/><span>Use demo movement (simulated walk, for testing without GPS)</span></label>
    <button className="ghost" onClick={onStop}>Stop tracking</button>
+   <p className="muted small">Going to sleep or switching your phone off? Stop tracking first. If your phone goes silent while tracking is on, the safety team is alerted after a few minutes, sooner in a risky zone or at night.</p>
    <p className="muted small">Emergency contact: {me.emergency_name} · {me.emergency_phone}</p>
   </section>
  </div>

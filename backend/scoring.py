@@ -167,7 +167,8 @@ def assess_batch(db: Session, items):
         rows.append(dict(i=i, t=t, lat=lat, lon=lon, ts=ts, feats=feats, speed=speed, accel=accel, turn=turn,
                          inactivity=inactivity, sos=float(it.get('sos', 0.0)), hour=it.get('hour')))
         if w['updated'] is None or ts >= w['updated']:  # only the newest fix advances "latest"
-            w['recent'] = w['recent'][-2:] + [dict(ts=ts.isoformat(), lat=lat, lon=lon, speed=speed, inactivity=inactivity)]
+            w['recent'] = w['recent'][-2:] + [dict(ts=ts.isoformat(), lat=lat, lon=lon, speed=speed, inactivity=inactivity,
+                                                    battery=it.get('battery'))]
             w['trail'] = w['trail'][-39:] + [[lat, lon]]
             w['updated'], w['last_i'] = ts, i
 

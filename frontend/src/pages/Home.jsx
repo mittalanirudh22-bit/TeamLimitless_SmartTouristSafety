@@ -33,7 +33,7 @@ export default function Home() {
         <li><h3>Turn on tracking while you explore</h3>
           <p>Your phone shares its location only while tracking is on, and you can stop at any time.</p></li>
         <li><h3>Get help fast</h3>
-          <p>Press SOS, or let the risk engine spot trouble: unusual movement, a risky zone after dark, a long stop far off your planned route.
+          <p>Press SOS, or let the risk engine spot trouble: unusual movement, a risky zone after dark, a long stop far off your planned route, or a phone that suddenly goes silent.
             Safety operators see it on their dashboard at once.</p></li>
       </ol>
     </section>

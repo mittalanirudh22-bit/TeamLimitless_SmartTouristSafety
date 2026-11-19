@@ -39,6 +39,14 @@ City content lives in `locations/<slug>/guide.json` (places, food, stays, emerge
 and `GET /api/cities/<slug>`. Hours and fees were checked in November 2026 and are labelled as approximate on the site. The
 Jaipur and Shillong safety zones are illustrative, like Bhopal's.
 
+## When a phone goes silent
+While tracking is on, the app sends a location at least every 30 s (with the battery level when the browser reports it).
+`backend/watchdog.py` checks every 30 s: after 3 min of silence the operator dashboard shows the traveller as "no signal";
+after 5 min an incident opens if the last location was risky (inside a flagged zone, at night, or at MODERATE/HIGH risk;
+severity HIGH), otherwise after 10 min (MEDIUM). A battery at or below 10% is flagged as the likely cause. The incident closes
+itself when locations arrive again. Pressing "Stop tracking" first never raises an alert. Timings are env vars:
+`SIGNAL_LOST_S`, `SIGNAL_ALERT_RISKY_S`, `SIGNAL_ALERT_S`, `SIGNAL_LOW_BATTERY`, `WATCHDOG_INTERVAL_S` (0 disables).
+
 ## Add a city
 `python scripts/setup_location.py --city Gangtok --state Sikkim --country India` creates `locations/gangtok/` with
 `config.yaml` (risk weights and thresholds), an empty `geofences.geojson` and `guide.todo.json`. Fill in the guide, draw the

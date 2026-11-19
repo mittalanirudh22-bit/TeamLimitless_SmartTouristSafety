@@ -12,6 +12,7 @@ const SIGNALS = [
   ['Night time', 'Late night and early morning count for more.'],
   ['City context', 'A small, city-wide adjustment from public crime statistics.'],
   ['SOS', 'Pressing SOS always raises an alert straight away.'],
+  ['Phone goes silent', 'No location for 10 minutes while tracking is on (5 minutes in a risky zone, at night or at an elevated risk level) alerts the safety team. Stop tracking first if you switch your phone off.'],
 ];
 
 export default function SafetyPage({guide}) {
@@ -44,7 +45,7 @@ export default function SafetyPage({guide}) {
 
     <section aria-labelledby="signals-title">
       <h2 id="signals-title">What raises your risk level</h2>
-      <p>While tracking is on, each location update is scored from seven signals. The score is a guide for the safety team, not a judgement about you.</p>
+      <p>While tracking is on, each location update is scored from seven signals, and the safety team is alerted if your phone stops sending them. The score is a guide for the safety team, not a judgement about you.</p>
       <dl className="signals">{SIGNALS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
     </section>
   </main>;

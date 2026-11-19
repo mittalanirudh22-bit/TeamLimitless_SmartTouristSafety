@@ -260,7 +260,7 @@ main > header p { margin: 2px 0 14px; color: var(--muted); }
 button.sos { background: var(--signal); border-color: var(--signal); width: 100%; margin-top: 12px; justify-content: center; font-size: 17px; padding: 12px; }
 .err { background: var(--signal); color: #fff; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
 .trow { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; justify-content: space-between; }
-.trow.on { background: var(--paper); } .trow span:first-child { flex: 1; }
+.trow.on { background: var(--paper); } .lost { color: var(--signal); font-weight: 600; } .trow span:first-child { flex: 1; }
 .pill { color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 99px; }
 .frow { display: grid; grid-template-columns: 130px 1fr 40px; gap: 8px; align-items: center; font-size: 13px; margin: 3px 0; }
 .frow span { color: var(--muted); }

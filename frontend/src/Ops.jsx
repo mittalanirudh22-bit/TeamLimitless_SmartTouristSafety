@@ -62,11 +62,11 @@ export default function Ops(){
   {err&&<div className="err">{err}</div>}
   <div className="grid">
    <section className="card wide"><h2>Live map <small>{real.length} registered traveller(s) · demo tourists replay synthetic trajectories</small></h2>
-    <MapView fences={fences} center={view.center} zoom={view.zoom} points={tourists.map(x=>({id:x.tourist_id,lat:x.latitude,lon:x.longitude,color:COLORS[x.risk_level]||'#888',
+    <MapView fences={fences} center={view.center} zoom={view.zoom} points={tourists.map(x=>({id:x.tourist_id,lat:x.latitude,lon:x.longitude,color:x.signal==='LOST'?'#6b7385':COLORS[x.risk_level]||'#888',
      radius:x.tourist_id===sel?11:8,label:`${x.name}: ${x.risk_level||'—'} (${x.risk_score??'-'})`,trail:x.trail,onClick:()=>setSel(x.tourist_id)}))}/></section>
    <section className="card"><h2>Tourists</h2>
     <div className="tlist">{tourists.map(x=><div key={x.tourist_id} className={`trow ${x.tourist_id===sel?'on':''}`} onClick={()=>setSel(x.tourist_id)}>
-     <span>{x.name}{x.registered&&<small> · {x.status}</small>}</span><span className="pill" style={{background:COLORS[x.risk_level]||'#888'}}>{x.risk_level||'—'}</span><b>{x.risk_score??'-'}</b></div>)}</div>
+     <span>{x.name}{x.registered&&<small> · {x.status}</small>}{x.signal==='LOST'&&<small className="lost"> · no signal {Math.round(x.last_seen_s/60)} min</small>}</span><span className="pill" style={{background:x.signal==='LOST'?'#6b7385':COLORS[x.risk_level]||'#888'}}>{x.signal==='LOST'?'NO SIGNAL':x.risk_level||'—'}</span><b>{x.risk_score??'-'}</b></div>)}</div>
     {t&&<><h3>{t.name} — risk factors</h3>
      {t.blockchain_id&&<p className="muted small">ID {t.blockchain_id}<br/>Emergency: {t.emergency_name} {t.emergency_phone}</p>}
      <Factors f={t.factors}/></>}

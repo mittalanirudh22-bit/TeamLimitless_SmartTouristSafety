@@ -30,6 +30,7 @@ class FixIn(BaseModel):
     longitude: float = Field(ge=-180, le=180)
     accuracy: float | None = Field(None, ge=0)
     timestamp: datetime | None = None
+    battery: int | None = Field(None, ge=0, le=100)  # phone battery %, if the browser reports it
 
 
 class DestinationIn(BaseModel):
@@ -189,7 +190,8 @@ def location(fix: FixIn, who=Depends(traveller_light)):
     if fix.accuracy is not None and fix.accuracy > 150:
         return {'ignored': 'GPS accuracy too low', 'accuracy_m': fix.accuracy}
     try:
-        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat()))
+        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat(),
+                            battery=fix.battery))
     except ingest.Backpressure:
         raise HTTPException(503, 'Server busy; retry shortly.', headers={'Retry-After': '5'})
     return {'queued': True}
