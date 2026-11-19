@@ -1,0 +1,196 @@
+{
+  "slug": "bhopal",
+  "name": "Bhopal",
+  "state": "Madhya Pradesh",
+  "wiki": "Bhopal",
+  "tagline": "City of lakes, nawabi kitchens and two World Heritage Sites an hour away.",
+  "intro": "Bhopal grew around an 11th-century lake and later became a princely state ruled for over a century by women, the Begums. Spend a day on the lakes and the hilltop museums of Shyamla Hills, an evening eating through the Old City, and a day out to the rock paintings of Bhimbetka or the stupas of Sanchi.",
+  "center": [23.2520, 77.4020],
+  "zoom": 13,
+  "timezone": "Asia/Kolkata",
+  "checked": "November 2026",
+  "facts": {
+    "best_time": "October to March. April to June regularly crosses 40°C.",
+    "getting_there": "Raja Bhoj Airport is about 15 km from the centre. Bhopal Junction and Rani Kamlapati stations are on the Delhi–Mumbai and Delhi–Chennai lines.",
+    "getting_around": "App cabs and autos are easy to find. Agree the fare or use the meter before you set off.",
+    "languages": "Hindi; English is understood in hotels, museums and most shops."
+  },
+  "emergency": [
+    {"label": "Police, fire, ambulance", "number": "112", "note": "National emergency number, works from any phone"},
+    {"label": "Ambulance", "number": "108"},
+    {"label": "Tourist helpline", "number": "1363", "note": "Ministry of Tourism, 24x7, 12 languages. Toll-free 1800-11-1363"},
+    {"label": "Women helpline", "number": "181"},
+    {"label": "Rail Madad (trains and stations)", "number": "139"},
+    {"label": "Cyber fraud", "number": "1930"}
+  ],
+  "safety_tips": [
+    "The Boat Club and VIP Road stretches of the Upper Lake stay busy until late. The far lake edges are unlit and empty after dark.",
+    "Old City lanes around Chowk get very crowded in the evening. Keep your phone and wallet in a front pocket.",
+    "Leave Bhimbetka and Sanchi by late afternoon. The roads run through forest and get dark early in winter.",
+    "Between April and June, plan outdoor sights for early morning and carry water."
+  ],
+  "places": [
+    {
+      "id": "upper-lake", "name": "Upper Lake (Bada Talab)", "category": "nature", "area": "Shyamla Hills", "must": true,
+      "lat": 23.2450, "lon": 77.3810, "wiki": "Upper_Lake_(Bhopal)",
+      "summary": "The 11th-century lake credited to Raja Bhoj that gave Bhopal its nickname. Take a boat out from the Boat Club, then walk the lakeside promenade at sunset.",
+      "hours": {"text": "Promenade open all day; boating in daylight hours"},
+      "fee": {"indian": "Free (boating extra)", "foreign": "Free (boating extra)"},
+      "visit_min": 90, "best": "An hour before sunset",
+      "tips": ["Boats leave from the Boat Club on Lake Drive Road.", "The Shyamla Hills road above the lake has the best views."],
+      "safety": "Stay on the lit Boat Club and VIP Road stretches after dark. The far edges of the lake are isolated."
+    },
+    {
+      "id": "taj-ul-masajid", "name": "Taj-ul-Masajid", "category": "faith", "area": "Old City", "must": true,
+      "lat": 23.2629, "lon": 77.3928, "wiki": "Taj-ul-Masajid",
+      "summary": "One of the largest mosques in India, with pink sandstone towers and a huge courtyard. Building started under Shah Jahan Begum in the 19th century and finished in the 1980s.",
+      "hours": {"open": "06:00", "close": "20:00", "closed": [], "note": "Avoid prayer times, especially Friday midday."},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 45, "best": "Early morning or late afternoon",
+      "tips": ["Dress modestly. Women are asked to cover their heads.", "Photography is fine, but ask before photographing people at prayer."],
+      "safety": "Busy area with heavy traffic at the gates. Cross with care."
+    },
+    {
+      "id": "tribal-museum", "name": "Madhya Pradesh Tribal Museum", "category": "museum", "area": "Shyamla Hills", "must": true,
+      "lat": 23.2386, "lon": 77.3936, "wiki": "Madhya_Pradesh_Tribal_Museum",
+      "summary": "Walk-through rooms built by tribal artists from across the state: houses, shrines, a forest of clay figures. Many visitors call it the best museum in the city.",
+      "hours": {"open": "12:00", "close": "20:00", "closed": ["Mon"], "note": "Also closed on national holidays."},
+      "fee": {"indian": "₹20", "foreign": "₹400"},
+      "visit_min": 120, "best": "Weekday afternoons",
+      "tips": ["Allow at least two hours.", "Chinhari, the museum shop, sells tribal crafts at fair prices."],
+      "safety": "Well staffed and safe. Shyamla Hills roads are quiet at night, so book your cab before leaving."
+    },
+    {
+      "id": "igrms", "name": "Museum of Mankind (IGRMS)", "category": "museum", "area": "Shyamla Hills", "must": true,
+      "lat": 23.2370, "lon": 77.3790, "wiki": "Indira_Gandhi_Rashtriya_Manav_Sangrahalaya",
+      "summary": "An open-air museum of real-size village houses from across India, spread over a hillside above the lake, plus an indoor gallery of folk and tribal life.",
+      "hours": {"open": "10:00", "close": "17:00", "closed": ["Mon"], "note": "Closes at 17:30 from March to August."},
+      "fee": {"indian": "About ₹30–40", "foreign": "About ₹200"},
+      "visit_min": 150, "best": "Morning, before the midday heat",
+      "tips": ["Wear walking shoes. The trail is long and hilly.", "Carry water; there is little shade on the open-air trail."],
+      "safety": "Large, quiet grounds. Keep to the marked trail and leave before closing."
+    },
+    {
+      "id": "van-vihar", "name": "Van Vihar National Park", "category": "nature", "area": "Lake View Road", "must": true,
+      "lat": 23.2300, "lon": 77.3664, "wiki": "Van_Vihar_National_Park",
+      "summary": "A small national park on the lake shore where rescued tigers, leopards, bears and crocodiles live in large open enclosures. Cycle or drive the single road through it.",
+      "hours": {"open": "06:30", "close": "18:30", "closed": ["Fri"], "note": "Hours shift with the season. Also closed on Holi and Diwali."},
+      "fee": {"indian": "₹25 on foot; more by cycle or vehicle", "foreign": "Higher rate, ask at the gate"},
+      "visit_min": 120, "best": "Early morning, when animals are active",
+      "tips": ["Rent a cycle at the gate.", "There are two gates; Chikoo Dwar on Lake View Road is the main one."],
+      "safety": "Stay on the main road and don't feed animals. Exit through a gate before closing; don't walk out along the lake edge."
+    },
+    {
+      "id": "bharat-bhavan", "name": "Bharat Bhavan", "category": "museum", "area": "Shyamla Hills",
+      "lat": 23.2480, "lon": 77.3950, "wiki": "Bharat_Bhavan",
+      "summary": "An arts centre by architect Charles Correa, built down a hillside towards the lake. It has galleries of modern and tribal art, plus theatre, music and poetry evenings.",
+      "hours": {"open": "13:00", "close": "19:00", "closed": ["Mon"], "note": "February to October: 14:00–20:00."},
+      "fee": {"indian": "₹10", "foreign": "About ₹50"},
+      "visit_min": 75, "best": "Late afternoon, then stay for an evening show",
+      "tips": ["Check the notice board for performances that evening."],
+      "safety": "Safe and staffed. Combine with the Tribal Museum nearby."
+    },
+    {
+      "id": "gohar-mahal", "name": "Gohar Mahal", "category": "heritage", "area": "Old City",
+      "lat": 23.2602, "lon": 77.3998, "wiki": "Gohar_Mahal",
+      "summary": "An 1820 palace built by Qudsia Begum, Bhopal's first woman ruler, mixing Hindu and Mughal styles. It now hosts craft fairs and exhibitions.",
+      "hours": {"text": "Daytime; opening depends on the fair or exhibition"},
+      "fee": {"indian": "Usually free", "foreign": "Usually free"},
+      "visit_min": 45, "best": "During a craft fair (often in winter)",
+      "tips": ["Ask locally whether a mela is on before you go."],
+      "safety": "Old City traffic is heavy. Walk with care around the lake road."
+    },
+    {
+      "id": "shaukat-mahal", "name": "Shaukat Mahal and Sadar Manzil", "category": "heritage", "area": "Chowk, Old City",
+      "lat": 23.2617, "lon": 77.4013, "wiki": "Shaukat_Mahal",
+      "summary": "Two 19th-century palaces at the entrance to the Old City. Shaukat Mahal mixes Gothic and Islamic details; Sadar Manzil was the Begums' hall of public audience.",
+      "hours": {"text": "Seen from outside; best in daylight"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 30, "best": "Late afternoon, before eating in the Old City",
+      "tips": ["Walk from here into Chowk Bazaar."],
+      "safety": "Crowded junction. Watch your bag."
+    },
+    {
+      "id": "chowk-bazaar", "name": "Chowk Bazaar", "category": "market", "area": "Old City",
+      "lat": 23.2633, "lon": 77.4030, "wiki": "Chowk_Bazaar,_Bhopal",
+      "summary": "The Old City's market lanes, selling zari-embroidered purses, silver jewellery, bangles and dry fruit around the Jama Masjid.",
+      "hours": {"text": "Late morning to late evening; busiest after 18:00"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 90, "best": "Early evening, then dinner at Chatori Gali",
+      "tips": ["Bargain politely; start at about half the first price.", "Look for jari-batua, Bhopal's embroidered purses."],
+      "safety": "Very crowded lanes. Keep valuables in a front pocket and stay with your group."
+    },
+    {
+      "id": "birla-mandir", "name": "Lakshmi Narayan Temple (Birla Mandir)", "category": "faith", "area": "Arera Hills",
+      "lat": 23.2393, "lon": 77.4026, "wiki": "Lakshmi_Narayan_Temple,_Bhopal",
+      "summary": "A hilltop temple with views over the Lower Lake and city, and a small museum of sculpture from the region.",
+      "hours": {"text": "Morning and evening darshan; closed for a few hours around midday"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 45, "best": "Evening aarti",
+      "tips": ["Leave shoes at the counter before entering."],
+      "safety": "Safe and busy in the evenings."
+    },
+    {
+      "id": "sanchi", "name": "Sanchi Stupa", "category": "daytrip", "area": "46 km north-east", "must": true,
+      "lat": 23.4795, "lon": 77.7397, "wiki": "Sanchi",
+      "summary": "A UNESCO World Heritage Site: Buddhist stupas, monasteries and four carved gateways from the 3rd century BCE onwards, on a quiet hilltop.",
+      "hours": {"open": "06:30", "close": "18:30", "closed": [], "note": "Sunrise to sunset. The ASI museum at the foot of the hill is closed on Fridays."},
+      "fee": {"indian": "₹40 (under 15 free)", "foreign": "₹600"},
+      "visit_min": 180, "best": "Early morning, about an hour's drive from Bhopal",
+      "tips": ["Hire a guide at the gate to read the gateway carvings.", "Book tickets online at the ASI site to skip the queue."],
+      "safety": "Little shade on the hilltop. Carry water and a hat."
+    },
+    {
+      "id": "bhimbetka", "name": "Bhimbetka Rock Shelters", "category": "daytrip", "area": "45 km south", "must": true,
+      "lat": 22.9383, "lon": 77.6131, "wiki": "Bhimbetka_rock_shelters",
+      "summary": "A UNESCO World Heritage Site: rock shelters in the forest with paintings of hunters, dancers and animals, some of them thousands of years old.",
+      "hours": {"open": "07:00", "close": "17:30", "closed": []},
+      "fee": {"indian": "₹25 (vehicle extra)", "foreign": "₹300"},
+      "visit_min": 120, "best": "Morning; combine with Bhojpur on the way back",
+      "tips": ["Follow the numbered trail; the Zoo Rock shelter has the densest paintings.", "Monkeys are bold. Keep food in your bag."],
+      "safety": "Forest area with weak mobile signal. Stay on the marked trail and leave well before dark."
+    },
+    {
+      "id": "bhojpur", "name": "Bhojeshwar Temple, Bhojpur", "category": "daytrip", "area": "28 km south-east",
+      "lat": 23.0997, "lon": 77.5794, "wiki": "Bhojeshwar_Temple",
+      "summary": "An unfinished 11th-century Shiva temple with one of the largest stone lingams in India. The ramp used to raise its stones can still be traced nearby.",
+      "hours": {"open": "06:00", "close": "18:00", "closed": []},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 60, "best": "On the way back from Bhimbetka",
+      "tips": ["Very busy on Mahashivratri. Pick another day unless you want the festival."],
+      "safety": "Rural roads. Travel back to Bhopal before dark."
+    }
+  ],
+  "food": [
+    {"id": "chatori-gali", "name": "Chatori Gali", "kind": "street", "veg": "non-veg", "price": "₹", "area": "Old City",
+     "lat": 23.2648, "lon": 77.4043, "known_for": "Bhopal's food lane: paya soup, nihari, seekh kebabs and biryani, open until late."},
+    {"id": "suleimani-chai", "name": "Suleimani chai stalls", "kind": "street", "veg": "veg", "price": "₹", "area": "Old City",
+     "lat": 23.2638, "lon": 77.4022, "known_for": "Bhopal's salty, milky tea. Have a cup after dinner in the Old City."},
+    {"id": "manohar-dairy", "name": "Manohar Dairy and Restaurant", "kind": "sweets", "veg": "veg", "price": "₹", "area": "Hamidia Road",
+     "lat": 23.2668, "lon": 77.4105, "known_for": "A city institution since 1970: poha-jalebi breakfasts, chaat, lassi and sweets."},
+    {"id": "bapu-ki-kutia", "name": "Bapu ki Kutia", "kind": "restaurant", "veg": "veg", "price": "₹", "area": "New Market",
+     "lat": 23.2338, "lon": 77.3998, "known_for": "Simple, home-style North Indian vegetarian meals."},
+    {"id": "sagar-gaire", "name": "Sagar Gaire", "kind": "cafe", "veg": "veg", "price": "₹", "area": "10 No. Market and other outlets",
+     "lat": 23.2128, "lon": 77.4335, "known_for": "Started as a cycle soup stall; now known for soups, triple-decker sandwiches and dosa."},
+    {"id": "six-no-hawkers", "name": "6 No. Hawkers Corner", "kind": "street", "veg": "both", "price": "₹", "area": "Shivaji Nagar",
+     "lat": 23.2265, "lon": 77.4185, "known_for": "Open-air snack corner: mawa bati, poha-jalebi, chaat and bhajiyas."},
+    {"id": "hakeems", "name": "Hakeem's", "kind": "restaurant", "veg": "non-veg", "price": "₹₹", "area": "Several outlets",
+     "lat": 23.2655, "lon": 77.4070, "known_for": "Long-running local favourite for kebabs and biryani."},
+    {"id": "zaaiqa", "name": "Za-aiqa, Noor-Us-Sabah Palace", "kind": "restaurant", "veg": "non-veg", "price": "₹₹₹", "area": "Koh-e-Fiza",
+     "lat": 23.2690, "lon": 77.3830, "known_for": "Bhopali and Mughlai dishes in a palace hotel overlooking the lake."}
+  ],
+  "stays": [
+    {"id": "jehan-numa", "name": "Jehan Numa Palace", "kind": "heritage", "price": "₹₹₹", "area": "Shyamla Hills",
+     "lat": 23.2457, "lon": 77.3925, "note": "A 19th-century palace turned hotel with gardens. Close to the museums."},
+    {"id": "noor-us-sabah", "name": "Noor-Us-Sabah Palace", "kind": "heritage", "price": "₹₹₹", "area": "Koh-e-Fiza",
+     "lat": 23.2690, "lon": 77.3830, "note": "Palace hotel on a hill above the Upper Lake."},
+    {"id": "taj-lakefront", "name": "Taj Lakefront", "kind": "luxury", "price": "₹₹₹", "area": "Prempura",
+     "lat": 23.2240, "lon": 77.3600, "note": "Modern luxury hotel on the lake shore next to Van Vihar."},
+    {"id": "palash", "name": "MPT Palash Residency", "kind": "government", "price": "₹₹", "area": "T.T. Nagar",
+     "lat": 23.2350, "lon": 77.4005, "note": "Run by MP Tourism. Reliable, central and walkable to New Market."},
+    {"id": "mp-nagar", "name": "MP Nagar business hotels", "kind": "area", "price": "₹₹", "area": "MP Nagar",
+     "lat": 23.2330, "lon": 77.4330, "note": "Mid-range chain hotels near DB Mall. Good transport links, little character."},
+    {"id": "hamidia-road", "name": "Hamidia Road budget hotels", "kind": "area", "price": "₹", "area": "Near Bhopal Junction",
+     "lat": 23.2680, "lon": 77.4120, "note": "Cheapest beds, close to the station. Noisy; fine for a night in transit."}
+  ]
+}

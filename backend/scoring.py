@@ -167,7 +167,8 @@ def assess_batch(db: Session, items):
         rows.append(dict(i=i, t=t, lat=lat, lon=lon, ts=ts, feats=feats, speed=speed, accel=accel, turn=turn,
                          inactivity=inactivity, sos=float(it.get('sos', 0.0)), hour=it.get('hour')))
         if w['updated'] is None or ts >= w['updated']:  # only the newest fix advances "latest"
-            w['recent'] = w['recent'][-2:] + [dict(ts=ts.isoformat(), lat=lat, lon=lon, speed=speed, inactivity=inactivity)]
+            w['recent'] = w['recent'][-2:] + [dict(ts=ts.isoformat(), lat=lat, lon=lon, speed=speed, inactivity=inactivity,
+                                                    battery=it.get('battery'))]
             w['trail'] = w['trail'][-39:] + [[lat, lon]]
             w['updated'], w['last_i'] = ts, i
 
@@ -197,7 +198,8 @@ def assess_batch(db: Session, items):
                       inactivity=round(min(1.0, r['inactivity'] / 900), 4),
                       historical_context=historical_context(db, t.location_slug),
                       night_flag=1.0 if (hour >= 22 or hour <= 5) else 0.0, sos=r['sos'])
-        res = calculate_risk(**inputs, weights=location_cfg(t.location_slug)['risk']['weights'])
+        risk_cfg = location_cfg(t.location_slug)['risk']
+        res = calculate_risk(**inputs, weights=risk_cfg['weights'], thresholds=risk_cfg.get('thresholds'))
         db.add(m.TouristLocation(tourist_id=t.tourist_id, recorded_at=ts, latitude=lat, longitude=lon, speed_kmh=r['speed'],
                                  acceleration_kmh_s=r['accel'], direction_change_deg=r['turn'], inactivity_seconds=r['inactivity']))
         # Risk history is sampled (level change, SOS, or a new minute) -- the full-rate value lives in tourist_state.

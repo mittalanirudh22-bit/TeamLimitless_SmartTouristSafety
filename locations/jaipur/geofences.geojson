@@ -1,0 +1,149 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Old City Bazaars",
+    "category": "tourist_zone",
+    "risk_level": 0.2,
+    "description": "Demo zone. Busy and patrolled; pickpockets and gem touts."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.815,
+       26.915
+      ],
+      [
+       75.833,
+       26.915
+      ],
+      [
+       75.833,
+       26.93
+      ],
+      [
+       75.815,
+       26.93
+      ],
+      [
+       75.815,
+       26.915
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Amer Fort Precinct",
+    "category": "tourist_zone",
+    "risk_level": 0.15,
+    "description": "Demo zone. Staffed monument area; steep ramps."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.846,
+       26.982
+      ],
+      [
+       75.856,
+       26.982
+      ],
+      [
+       75.856,
+       26.99
+      ],
+      [
+       75.846,
+       26.99
+      ],
+      [
+       75.846,
+       26.982
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Nahargarh Hill Road (night)",
+    "category": "isolated",
+    "risk_level": 0.65,
+    "description": "Demo zone. Winding, unlit hill road; avoid after dark."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.817,
+       26.938
+      ],
+      [
+       75.832,
+       26.938
+      ],
+      [
+       75.832,
+       26.95
+      ],
+      [
+       75.817,
+       26.95
+      ],
+      [
+       75.817,
+       26.938
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Galta Hills Trail (isolated)",
+    "category": "isolated",
+    "risk_level": 0.6,
+    "description": "Demo zone. Empty hill trail east of the temples; go before dusk."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.862,
+       26.912
+      ],
+      [
+       75.876,
+       26.912
+      ],
+      [
+       75.876,
+       26.924
+      ],
+      [
+       75.862,
+       26.924
+      ],
+      [
+       75.862,
+       26.912
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

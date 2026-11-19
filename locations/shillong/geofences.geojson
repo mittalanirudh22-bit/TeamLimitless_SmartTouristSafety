@@ -1,0 +1,149 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Police Bazaar",
+    "category": "tourist_zone",
+    "risk_level": 0.15,
+    "description": "Demo zone. Crowded centre; mind your belongings."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       91.879,
+       25.574
+      ],
+      [
+       91.888,
+       25.574
+      ],
+      [
+       91.888,
+       25.581
+      ],
+      [
+       91.879,
+       25.581
+      ],
+      [
+       91.879,
+       25.574
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Elephant Falls Gorge (wet steps)",
+    "category": "hazard",
+    "risk_level": 0.5,
+    "description": "Demo zone. Steep, slippery steps; take care in rain."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       91.822,
+       25.536
+      ],
+      [
+       91.8275,
+       25.536
+      ],
+      [
+       91.8275,
+       25.5405
+      ],
+      [
+       91.822,
+       25.5405
+      ],
+      [
+       91.822,
+       25.536
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Umiam Lake Edges (night)",
+    "category": "isolated",
+    "risk_level": 0.65,
+    "description": "Demo zone. Isolated shoreline after dark."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       91.87,
+       25.66
+      ],
+      [
+       91.905,
+       25.66
+      ],
+      [
+       91.905,
+       25.68
+      ],
+      [
+       91.87,
+       25.68
+      ],
+      [
+       91.87,
+       25.66
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Laitlum Cliff Edges",
+    "category": "hazard",
+    "risk_level": 0.75,
+    "description": "Demo zone. Unfenced cliffs; fog arrives fast."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       91.926,
+       25.465
+      ],
+      [
+       91.934,
+       25.465
+      ],
+      [
+       91.934,
+       25.471
+      ],
+      [
+       91.926,
+       25.471
+      ],
+      [
+       91.926,
+       25.465
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

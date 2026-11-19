@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from . import ingest, ledger, models as m, scoring
+from . import guide, ingest, ledger, models as m, scoring
 from .database import get_db
 from .service import finish, incident_out, iso, open_incident, process_fix, queue_block
 
 router = APIRouter()
+DEFAULT_LOCATION = os.getenv('DEFAULT_LOCATION', 'bhopal')
 PHONE = r'^\+?[0-9 \-]{7,18}$'
 _hits: dict[str, list[float]] = {}
 
@@ -21,6 +22,7 @@ class RegisterIn(BaseModel):
     emergency_name: str = Field(min_length=2, max_length=80)
     emergency_phone: str = Field(pattern=PHONE)
     consent: bool
+    city: str | None = Field(None, max_length=40)  # trip city slug; defaults to the pilot city
 
 
 class FixIn(BaseModel):
@@ -28,6 +30,12 @@ class FixIn(BaseModel):
     longitude: float = Field(ge=-180, le=180)
     accuracy: float | None = Field(None, ge=0)
     timestamp: datetime | None = None
+    battery: int | None = Field(None, ge=0, le=100)  # phone battery %, if the browser reports it
+
+
+class DestinationIn(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
 
 class SosIn(BaseModel):
@@ -54,7 +62,8 @@ def profile(db, reg, t):
     st = db.get(m.TouristState, t.tourist_id)
     inc = db.query(m.Incident).filter(m.Incident.tourist_id == t.tourist_id, m.Incident.status != 'RESOLVED').all()
     return dict(
-        tourist_id=t.tourist_id, name=reg.full_name, nationality=reg.nationality, status=t.status,
+        tourist_id=t.tourist_id, name=reg.full_name, nationality=reg.nationality, status=t.status, city=t.location_slug,
+        destination=dict(latitude=t.dest_lat, longitude=t.dest_lon) if t.dest_lat is not None else None,
         blockchain_id=reg.blockchain_id, registered_at=iso(reg.registered_at),
         emergency_name=reg.emergency_name, emergency_phone=reg.emergency_phone,
         latitude=st.latitude if st else None, longitude=st.longitude if st else None,
@@ -67,6 +76,9 @@ def profile(db, reg, t):
 def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     if not body.consent:
         raise HTTPException(400, 'Consent to location tracking is required to register.')
+    city = (body.city or DEFAULT_LOCATION).strip().lower()
+    if city not in guide.location_slugs():
+        raise HTTPException(422, f'Safe Tour does not cover "{city}" yet.')
     ip = (request.headers.get('x-forwarded-for') or request.client.host or '?').split(',')[0].strip()
     limit, rc = int(os.getenv('REGISTER_LIMIT_PER_HOUR', '10')), ingest.redis_client()
     if rc is not None:  # shared across every web process
@@ -89,7 +101,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     record = json.dumps({'tourist_id': tid, 'name': body.full_name, 'nationality': body.nationality, 'phone': body.phone,
                          'registered_at': registered.isoformat(), 'salt': salt}, sort_keys=True, separators=(',', ':'))
     block = ledger.append('REGISTRATION', tid, ledger.sha256(record))
-    db.add(m.Tourist(tourist_id=tid, location_slug='bhopal', display_name=body.full_name, status='REGISTERED'))
+    db.add(m.Tourist(tourist_id=tid, location_slug=city, display_name=body.full_name, status='REGISTERED'))
     db.flush()
     db.add(m.Registration(
         tourist_id=tid, full_name=body.full_name, nationality=body.nationality, phone=body.phone, email=body.email,
@@ -113,6 +125,28 @@ def _set_status(db, who, status, block_type):
                     ledger.sha256(f'{t.tourist_id}|{status}|{datetime.now(timezone.utc).isoformat()}'))
     finish(db)
     _auth.pop(reg.token_hash, None)
+    return profile(db, reg, t)
+
+
+@router.post('/me/destination')
+def set_destination(body: DestinationIn, who=Depends(current_traveller), db: Session = Depends(get_db)):
+    """Tell the safety engine where the traveller is heading (from the trip planner). Route deviation is then
+    measured from where they are now to that destination."""
+    reg, t = who
+    st = db.get(m.TouristState, t.tourist_id)
+    if not st or st.latitude is None:
+        raise HTTPException(409, 'Start tracking first, so the safety team knows where your route begins.')
+    t.start_lat, t.start_lon = st.latitude, st.longitude
+    t.dest_lat, t.dest_lon = body.latitude, body.longitude
+    db.commit()
+    return profile(db, reg, t)
+
+
+@router.delete('/me/destination')
+def clear_destination(who=Depends(current_traveller), db: Session = Depends(get_db)):
+    reg, t = who
+    t.start_lat = t.start_lon = t.dest_lat = t.dest_lon = None
+    db.commit()
     return profile(db, reg, t)
 
 
@@ -156,7 +190,8 @@ def location(fix: FixIn, who=Depends(traveller_light)):
     if fix.accuracy is not None and fix.accuracy > 150:
         return {'ignored': 'GPS accuracy too low', 'accuracy_m': fix.accuracy}
     try:
-        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat()))
+        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat(),
+                            battery=fix.battery))
     except ingest.Backpressure:
         raise HTTPException(503, 'Server busy; retry shortly.', headers={'Retry-After': '5'})
     return {'queued': True}

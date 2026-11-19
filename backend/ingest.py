@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from . import models as m, scoring
 from .database import SessionLocal
 from .service import finish, open_incident
+from .watchdog import resolve_returned
 
 log = logging.getLogger('ingest')
 SHARDS = int(os.getenv('INGEST_SHARDS', '2'))
@@ -44,13 +45,14 @@ def process_batch(entries):
     t0 = time.perf_counter()
     with SessionLocal() as db:
         tourists = {t.tourist_id: t for t in db.query(m.Tourist).filter(m.Tourist.tourist_id.in_({e['tid'] for e in entries}))}
-        items = [dict(tourist=tourists[e['tid']], lat=e['lat'], lon=e['lon'], ts=datetime.fromisoformat(e['ts']))
+        items = [dict(tourist=tourists[e['tid']], lat=e['lat'], lon=e['lon'], ts=datetime.fromisoformat(e['ts']), battery=e.get('battery'))
                  for e in entries if e['tid'] in tourists and tourists[e['tid']].status == 'TRACKING']
         results = scoring.assess_batch(db, items)
         for it, res in zip(items, results):
             if res.get('risk_level') == 'HIGH':
                 open_incident(db, it['tourist'].tourist_id, 'HIGH_RISK', 'HIGH', it['lat'], it['lon'],
                               f"Risk score {res['risk_score']}" + (f" in {res['geofence']}" if res['geofence'] else ''))
+        resolve_returned(db, list({it['tourist'].tourist_id for it in items}))
         finish(db)
     with _stats_lock:
         stats['processed'] += len(items)
