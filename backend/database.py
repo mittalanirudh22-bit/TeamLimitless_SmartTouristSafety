@@ -1,6 +1,6 @@
-import os
+import logging, os
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,6 +11,31 @@ for prefix in ('postgres://', 'postgresql://'):
     if DATABASE_URL.startswith(prefix):
         DATABASE_URL = 'postgresql+psycopg://' + DATABASE_URL[len(prefix):]
 (ROOT / 'data').mkdir(exist_ok=True)
+SQLITE_URL = f"sqlite:///{ROOT / 'data' / 'tourist_safety.db'}"
+FALLBACK_REASON = None
+
+
+def _reachable(url):
+    try:
+        probe = create_engine(url, connect_args={'connect_timeout': 5})
+        with probe.connect() as c:
+            c.execute(text('SELECT 1'))
+        probe.dispose()
+        return None
+    except Exception as e:  # noqa: BLE001 -- any failure means we can't use it
+        return f'{type(e).__name__}: {str(e).splitlines()[0][:200]}'
+
+
+# Keep the website up if its Postgres is gone (e.g. a free Render database past its 30-day expiry): fall back to a
+# local SQLite file and say so loudly in the logs and /api/info. Data then lives only as long as the container.
+# The stand-alone worker turns this off (DB_FALLBACK_SQLITE=0): a worker writing to its own private file would
+# silently swallow fixes, whereas a worker that fails lets the web tier's own consumers take over.
+if not DATABASE_URL.startswith('sqlite') and os.getenv('DB_FALLBACK_SQLITE', '1') == '1':
+    FALLBACK_REASON = _reachable(DATABASE_URL)
+    if FALLBACK_REASON:
+        logging.getLogger('database').error('Postgres unreachable (%s); falling back to SQLite. '
+                                            'Set DATABASE_URL to a working database to keep data across restarts.', FALLBACK_REASON)
+        DATABASE_URL = SQLITE_URL
 is_sqlite = DATABASE_URL.startswith('sqlite')
 # Pools are sized above the request threadpool (40) plus ingest workers, so a burst queues on the database instead of
 # starving for connections. Mind max_connections on the server: pool_size + max_overflow, times web processes.

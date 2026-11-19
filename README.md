@@ -83,4 +83,9 @@ What makes it fast:
 
 **Redis + worker on Render.** `render.yaml` defines a free Key Value (Redis) instance and a paid background worker (`python -m backend.worker`). The web service enqueues to Redis Streams; while a worker heartbeats, the web tier's embedded consumers stand by, and they resume automatically within ~20 s if the worker stops, so tracking never depends on the worker being up. Each of the `INGEST_SHARDS` shards is leased to exactly one consumer at a time, keeping each tourist's fixes in order. Raise `numInstances` on the worker (up to the shard count) for more throughput; extra workers are hot spares.
 
+**If Postgres is unreachable** (for example a free Render database past its 30-day expiry), the web service starts on a
+local SQLite file instead of crash-looping, logs an error, and reports the reason as `database_fallback` in `/api/info`.
+Data then lasts only until the container restarts (free instances sleep after 15 idle minutes). For lasting data, point
+`DATABASE_URL` at a working database. Set `DB_FALLBACK_SQLITE=0` to fail instead; the stand-alone worker always fails.
+
 **Scaling out (needs Postgres + Redis).** Set `REDIS_URL` and fixes flow through Redis Streams (consumer groups, ack after commit = at-least-once, dead-consumer messages are re-claimed). Run extra consumers with `python -m backend.worker --name w1` and set `INGEST_EMBEDDED_WORKERS=0` on web instances that should only enqueue. Shared registration rate limiting also moves to Redis. Without `REDIS_URL` everything runs in-process (the Render free-tier setup). `WEB_CONCURRENCY>1` requires Postgres (cross-process ledger lock) and breaks the single-process demo replay. Mind Postgres `max_connections`: each process uses up to `DB_POOL_SIZE + DB_MAX_OVERFLOW` (default 20+40).

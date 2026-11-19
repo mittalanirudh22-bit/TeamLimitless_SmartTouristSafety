@@ -2,9 +2,10 @@
     REDIS_URL=... DATABASE_URL=... python -m backend.worker [--name w1]
 Each process competes for shard leases (see ingest.py), so adding workers adds capacity up to INGEST_SHARDS and
 extra processes act as hot spares. Stops cleanly on SIGTERM, releasing its shards and finishing its current batch."""
-import argparse, logging, signal, threading
-from . import ingest, models as m
-from .database import engine, ensure_indexes
+import argparse, logging, os, signal, threading
+os.environ['DB_FALLBACK_SQLITE'] = '0'  # never write to a private SQLite file; fail so the web tier takes over
+from . import ingest, models as m  # noqa: E402
+from .database import engine, ensure_indexes  # noqa: E402
 
 p = argparse.ArgumentParser()
 p.add_argument('--name', default=None, help='consumer name (default: hostname-pid)')

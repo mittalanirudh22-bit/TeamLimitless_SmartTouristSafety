@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
 from . import guide, ingest, ledger, models as m, retention, scoring, simulation, watchdog
+from . import database
 from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
 from .seed import seed_all, DEMO
 from .service import audit, finish, incident_out, iso, open_incident, process_fix, require_ops
@@ -83,6 +84,7 @@ def demo_tourist(db, tid):
 def info():
     return {'project': 'Team Limitless', 'status': 'running', 'pilot_location': 'Bhopal', 'design': 'location-agnostic',
             'model_loaded': scoring.model_bundle() is not None, 'database': engine.dialect.name,
+            'database_fallback': database.FALLBACK_REASON,
             'ops_auth': bool(os.getenv('OPS_TOKEN')), 'ingest': ingest.public_status(), 'cities': guide.guide_slugs()}
 
 

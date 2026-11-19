@@ -434,3 +434,13 @@ def test_watchdog_flags_silent_phones_and_clears_when_signal_returns(client):
     assert ingest.wait_idle()
     assert not open_(risky)  # signal back: incident closed automatically
     assert client.get('/api/ledger/verify').json()['valid']
+
+
+def test_unreachable_postgres_falls_back_to_sqlite_but_not_in_the_worker():
+    import subprocess, sys
+    env = {**os.environ, 'DATABASE_URL': 'postgresql://u:p@127.0.0.1:1/none'}
+    code = 'from backend import database as d; print(d.engine.dialect.name, bool(d.FALLBACK_REASON))'
+    out = subprocess.run([sys.executable, '-c', code], env=env, capture_output=True, text=True, timeout=60)
+    assert out.stdout.split() == ['sqlite', 'True'], out.stderr[-500:]
+    out = subprocess.run([sys.executable, '-c', code], env={**env, 'DB_FALLBACK_SQLITE': '0'}, capture_output=True, text=True, timeout=60)
+    assert out.stdout.split() == ['postgresql', 'False'], out.stderr[-500:]
