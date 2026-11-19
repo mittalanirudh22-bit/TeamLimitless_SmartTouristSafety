@@ -20,7 +20,7 @@ function Header({route}) {
   const {data: cities} = useCities(), city = route.city, trip = useTrip(city);
   const ops = route.page === 'ops';
   return <header className="site-head">
-    <a className="skip" href="#content">Skip to content</a>
+    <a className="skip" href="#content" onClick={e => { e.preventDefault(); document.getElementById('content')?.focus(); }}>Skip to content</a>
     <div className="site-head-row">
       <a className="brand" href={href.home}>Safe Tour</a>
       {!ops && cities && <label className="city-switch"><span className="sr-only">City</span>
@@ -66,7 +66,7 @@ function App() {
   const route = useRoute();
   return <>
     <Header route={route}/>
-    <div id="content"><Page route={route}/></div>
+    <div id="content" tabIndex={-1}><Page route={route}/></div>
     <footer className="site-foot">
       <p>Safe Tour by Team Limitless. City information last checked November 2026; hours and fees change, so confirm locally.
         Photos from Wikipedia, maps from OpenStreetMap contributors.</p>
