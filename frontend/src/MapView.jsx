@@ -18,13 +18,14 @@ export default function MapView({points = [], pins = [], fences, showFences = tr
     for (const k of ['fences', 'route', 'pins', 'points']) layers.current[k] = L.layerGroup().addTo(mp);
     mp.on('focus', () => mp.scrollWheelZoom.enable());
     mp.on('blur', () => mp.scrollWheelZoom.disable());
-    const ro = new ResizeObserver(() => mp.invalidateSize());
+    const ro = new ResizeObserver(() => { if (map.current === mp) mp.invalidateSize({pan: false}); });
     ro.observe(el.current);
-    return () => { ro.disconnect(); mp.remove(); };
+    // stop any running pan/zoom before removing, or Leaflet's animation callbacks fire on a map that no longer exists
+    return () => { ro.disconnect(); map.current = null; mp.stop(); mp.off(); mp.remove(); };
   }, []);
 
   useEffect(() => {  // follow the page's city when it changes
-    if (!fit && !follow && map.current) map.current.setView(center, zoom);
+    if (!fit && !follow && map.current) map.current.setView(center, zoom, {animate: false});
   }, [center[0], center[1], zoom]); // eslint-disable-line
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function MapView({points = [], pins = [], fences, showFences = tr
     if (fit && pins.length) {
       const target = fitPins?.length ? fitPins : pins;  // e.g. frame the city, leaving far-off day trips outside the view
       const b = L.latLngBounds(target.map(p => [p.lat, p.lon]));
-      map.current.fitBounds(b, {padding: [36, 36], maxZoom: 15});
+      map.current?.fitBounds(b, {padding: [36, 36], maxZoom: 15, animate: false});
     }
   }, [pinKey, fit]); // eslint-disable-line
 
@@ -71,7 +72,7 @@ export default function MapView({points = [], pins = [], fences, showFences = tr
     });
     const first = points.find(p => p.lat != null);
     if (first && (follow || !fitted.current) && !pins.length) {
-      map.current.setView([first.lat, first.lon], follow ? Math.max(map.current.getZoom(), 15) : 14);
+      map.current?.setView([first.lat, first.lon], follow ? Math.max(map.current.getZoom(), 15) : 14, {animate: false});
       fitted.current = true;
     }
   }, [points, follow]); // eslint-disable-line
