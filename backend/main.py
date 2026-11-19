@@ -8,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
-from . import ingest, ledger, models as m, retention, scoring, simulation
+from . import guide, ingest, ledger, models as m, retention, scoring, simulation
 from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
-from .seed import seed, DEMO
+from .seed import seed_all, DEMO
 from .service import audit, finish, incident_out, iso, open_incident, process_fix, require_ops
 from .travellers import router as travellers_router
 
@@ -23,7 +23,7 @@ async def lifespan(_app):
     m.Base.metadata.create_all(engine)
     ensure_indexes()
     with SessionLocal() as db:
-        seed(db, DEFAULT_LOCATION)
+        seed_all(db, DEFAULT_LOCATION)
     ledger.ensure_genesis()
     ingest.start()
     stop_retention = retention.start()
@@ -35,6 +35,7 @@ async def lifespan(_app):
 
 app = FastAPI(title='Team Limitless Smart Tourist Safety API', version='5.0.0', lifespan=lifespan)
 app.include_router(travellers_router, prefix='/api/travellers')
+app.include_router(guide.router, prefix='/api/cities')
 
 
 class RiskRequest(BaseModel):
@@ -80,7 +81,7 @@ def demo_tourist(db, tid):
 def info():
     return {'project': 'Team Limitless', 'status': 'running', 'pilot_location': 'Bhopal', 'design': 'location-agnostic',
             'model_loaded': scoring.model_bundle() is not None, 'database': engine.dialect.name,
-            'ops_auth': bool(os.getenv('OPS_TOKEN')), 'ingest': ingest.public_status()}
+            'ops_auth': bool(os.getenv('OPS_TOKEN')), 'ingest': ingest.public_status(), 'cities': guide.guide_slugs()}
 
 
 @app.get('/health')
@@ -103,10 +104,13 @@ def risk(req: RiskRequest):
 
 
 @app.get('/api/geofences')
-def geofences(db: Session = Depends(get_db)):
+def geofences(city: str | None = None, db: Session = Depends(get_db)):
+    slug = city or DEFAULT_LOCATION
+    if not guide.valid_slug(slug):
+        raise HTTPException(404, 'unknown city')
     return {'type': 'FeatureCollection', 'features': [
         {'type': 'Feature', 'geometry': g.geojson, 'properties': dict(name=g.name, category=g.category, risk_level=g.risk_level, description=g.description)}
-        for g in db.query(m.Geofence).filter_by(location_slug=DEFAULT_LOCATION)]}
+        for g in db.query(m.Geofence).filter_by(location_slug=slug)]}
 
 
 # ---- public ledger verification (no PII) ----
@@ -141,11 +145,14 @@ def ledger_list(limit: int = 25, db: Session = Depends(get_db)):
 
 
 @app.get('/api/tourists', dependencies=[Depends(require_ops)])
-def tourists(limit: int = 500, since: datetime | None = None, db: Session = Depends(get_db)):
+def tourists(limit: int = 500, since: datetime | None = None, city: str | None = None, db: Session = Depends(get_db)):
     """Three queries total, independent of fleet size (latest state lives in tourist_state, not the history tables).
-    With `since`, only tourists whose state changed after that instant are returned (the dashboard merges them)."""
+    With `since`, only tourists whose state changed after that instant are returned (the dashboard merges them).
+    With `city`, only that city's tourists; otherwise every city."""
     limit = max(1, min(limit, 2000))
-    q = db.query(m.Tourist).filter_by(location_slug=DEFAULT_LOCATION)
+    q = db.query(m.Tourist)
+    if city:
+        q = q.filter(m.Tourist.location_slug == city)
     if since is not None:
         since = since if since.tzinfo else since.replace(tzinfo=timezone.utc)
         q = q.join(m.TouristState, m.TouristState.tourist_id == m.Tourist.tourist_id).filter(m.TouristState.updated_at > since)
@@ -156,7 +163,7 @@ def tourists(limit: int = 500, since: datetime | None = None, db: Session = Depe
     out = []
     for t in rows:
         st, reg = states.get(t.tourist_id), regs.get(t.tourist_id)
-        out.append(dict(tourist_id=t.tourist_id, name=t.display_name, status=t.status, registered=reg is not None,
+        out.append(dict(tourist_id=t.tourist_id, name=t.display_name, status=t.status, registered=reg is not None, city=t.location_slug,
                         blockchain_id=reg.blockchain_id if reg else None,
                         emergency_name=reg.emergency_name if reg else None, emergency_phone=reg.emergency_phone if reg else None,
                         latitude=st.latitude if st else None, longitude=st.longitude if st else None,

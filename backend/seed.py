@@ -4,18 +4,22 @@ import yaml
 from sqlalchemy.orm import Session
 from . import models as m
 from .database import ROOT
+from .guide import location_slugs
 
 DEMO = [('T001', 'Demo Tourist 1'), ('T002', 'Demo Tourist 2'), ('T003', 'Demo Tourist 3')]
 
 
-def seed(db: Session, slug='bhopal'):
+def seed(db: Session, slug='bhopal', demo=True):
+    """Load one location (config, geofences, context data). Demo tourists are only created for the pilot city."""
     if db.query(m.Location).filter_by(slug=slug).first():
         return
     cfg = yaml.safe_load((ROOT / 'locations' / slug / 'config.yaml').read_text())['location']
     db.add(m.Location(slug=slug, name=cfg['name'], state=cfg.get('state'), country=cfg['country']))
     db.flush()
-    for tid, name in DEMO:
-        db.add(m.Tourist(tourist_id=tid, location_slug=slug, display_name=name))
+    if demo:
+        for tid, name in DEMO:
+            if not db.get(m.Tourist, tid):
+                db.add(m.Tourist(tourist_id=tid, location_slug=slug, display_name=name))
     gj = ROOT / 'locations' / slug / 'geofences.geojson'
     if gj.exists():
         for f in json.loads(gj.read_text())['features']:
@@ -33,3 +37,9 @@ def seed(db: Session, slug='bhopal'):
             db.add(m.SafetyContext(location_slug=slug, year=int(r.year), crime_category=r.crime_category,
                                    crime_count=int(r.crime_count), source='synthetic'))
     db.commit()
+
+
+def seed_all(db: Session, default='bhopal'):
+    """Every city under locations/ gets its safety zones loaded, so travellers can register and be scored anywhere."""
+    for slug in location_slugs():
+        seed(db, slug, demo=(slug == default))

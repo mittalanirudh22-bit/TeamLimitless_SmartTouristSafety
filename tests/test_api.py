@@ -167,14 +167,16 @@ def test_backpressure_returns_503(client, traveller, monkeypatch):
 
 
 def test_delta_polling_returns_only_changes(client, traveller):
+    from datetime import datetime, timedelta, timezone
     _, h = traveller
+    t0 = datetime.now(timezone.utc) + timedelta(days=1)  # later than any fix other tests stamp with "now"
     client.post('/api/travellers/me/start', headers=h)
-    _fix(client, h, 23.25, 77.35, '2026-10-15T10:00:00Z')
+    _fix(client, h, 23.25, 77.35, t0.isoformat())
     assert ingest.wait_idle()
     full = client.get('/api/tourists', headers=OPS).json()
     latest = max(t['updated_at'] for t in full if t['updated_at'])
     assert client.get('/api/tourists', params={'since': latest}, headers=OPS).json() == []
-    _fix(client, h, 23.2501, 77.35, '2026-10-15T10:00:30Z')
+    _fix(client, h, 23.2501, 77.35, (t0 + timedelta(seconds=30)).isoformat())
     assert ingest.wait_idle()
     changed = client.get('/api/tourists', params={'since': latest}, headers=OPS).json()
     assert len(changed) == 1 and len(full) > 1
@@ -327,3 +329,60 @@ def test_embedded_consumers_yield_to_a_live_worker_and_resume_without_it():
 def test_info_reports_queue_backend(client):
     info = client.get('/api/info').json()
     assert info['ingest']['backend'] == 'memory' and info['ingest']['shards'] == ingest.SHARDS
+
+
+# ---- tourist website: city guides, multi-city registration, trip destination ----
+CATEGORIES = {'heritage', 'museum', 'nature', 'faith', 'market', 'daytrip'}
+
+
+def test_city_guides_are_complete(client):
+    cities = client.get('/api/cities').json()
+    assert {c['slug'] for c in cities} >= {'bhopal', 'jaipur', 'shillong'}
+    for c in cities:
+        g = client.get(f"/api/cities/{c['slug']}").json()
+        lat0, lon0 = g['center']
+        for key in ('places', 'food', 'stays'):
+            ids = [x['id'] for x in g[key]]
+            assert ids and len(ids) == len(set(ids)), (c['slug'], key)
+            for x in g[key]:  # every pin lands near its city (day trips allowed further out)
+                assert abs(x['lat'] - lat0) < 1.0 and abs(x['lon'] - lon0) < 1.0, (c['slug'], x['id'])
+        for p in g['places']:
+            assert p['category'] in CATEGORIES and p['summary'] and p['fee']['indian'] and p['visit_min'] > 0
+            h = p['hours']
+            assert h.get('text') or (len(h['open']) == 5 and len(h['close']) == 5 and h['open'] < h['close'])
+            assert set(h.get('closed', [])) <= {'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'}
+        assert all(f['veg'] in ('veg', 'non-veg', 'both') for f in g['food'])
+        assert any(e['number'] == '112' for e in g['emergency'])
+        assert client.get(f"/api/geofences?city={c['slug']}").json()['features'], c['slug']
+    assert client.get('/api/cities/template').status_code == 404
+    assert client.get('/api/cities/atlantis').status_code == 404
+    assert client.get('/api/geofences?city=Bad Slug').status_code == 404
+
+
+def test_register_in_another_city_and_share_destination(client):
+    assert client.post('/api/travellers/register', json={**BODY, 'city': 'atlantis'}).status_code == 422
+    r = client.post('/api/travellers/register', json={**BODY, 'city': 'jaipur'}).json()
+    h = {'X-Tracking-Token': r['tracking_token']}
+    me = client.get('/api/travellers/me', headers=h).json()
+    assert me['city'] == 'jaipur' and me['destination'] is None
+    dest = {'latitude': 26.9239, 'longitude': 75.8267}
+    assert client.post('/api/travellers/me/destination', json=dest, headers=h).status_code == 409  # no position yet
+    client.post('/api/travellers/me/start', headers=h)
+    _fix(client, h, 26.9200, 75.8240, '2026-11-01T10:00:00Z')
+    assert ingest.wait_idle()
+    me = client.post('/api/travellers/me/destination', json=dest, headers=h).json()
+    assert me['destination'] == dest
+    _fix(client, h, 26.9205, 75.8245, '2026-11-01T10:00:10Z')  # on the way: little deviation
+    assert ingest.wait_idle()
+    assert client.get('/api/travellers/me', headers=h).json()['factors']['route_deviation'] < 0.2
+    jaipur = client.get('/api/tourists?city=jaipur', headers=OPS).json()
+    assert any(t['tourist_id'] == r['tourist_id'] and t['city'] == 'jaipur' for t in jaipur)
+    assert not any(t['tourist_id'] == r['tourist_id'] for t in client.get('/api/tourists?city=bhopal', headers=OPS).json())
+    assert client.delete('/api/travellers/me/destination', headers=h).json()['destination'] is None
+
+
+def test_risk_thresholds_come_from_config():
+    from ml.risk_engine import calculate_risk
+    sig = dict(movement_anomaly=0.5, geofence_risk=0, route_deviation=0, inactivity=0, historical_context=0, night_flag=0, sos=0)
+    assert calculate_risk(**sig).level == 'LOW'  # 0.175 with the default cut-offs
+    assert calculate_risk(**sig, thresholds={'low_max': 0.1, 'moderate_max': 0.15}).level == 'HIGH'

@@ -24,8 +24,26 @@ Important: GeoLife has real GPS trajectories but no reliable emergency/crime lab
 7. Start frontend:
    `cd frontend && npm install && npm run dev`
 
-For another location:
-`python scripts/setup_location.py --city Jaipur --state Rajasthan --country India`
+## Tourist website
+The site at `/` is a full tourist guide on top of the safety system: city overview, Explore (places with hours, fees, open-now
+and photos from Wikipedia), place pages, Eat and stay, a Trip planner and the Safety hub (tourist ID, live tracking, SOS).
+It ships with **Bhopal**, **Jaipur** and **Shillong**.
+- **Trip planner** (`#/c/<city>/plan`): "Plan it for me" builds a day-by-day route (must-sees first, nearest next, respecting
+  opening hours and closed days, day trips on the last day). It warns when a stop is closed that day or would put you in a
+  risky zone after dark. "Going now" sends the stop to `POST /api/travellers/me/destination`, so the route-deviation signal
+  measures distance from the real route.
+- **Safety layer**: every city map can show the risk zones the engine scores against.
+- **Operator dashboard** (`#/ops`) can filter by city.
+
+City content lives in `locations/<slug>/guide.json` (places, food, stays, emergency numbers, tips), served by `GET /api/cities`
+and `GET /api/cities/<slug>`. Hours and fees were checked in November 2026 and are labelled as approximate on the site. The
+Jaipur and Shillong safety zones are illustrative, like Bhopal's.
+
+## Add a city
+`python scripts/setup_location.py --city Gangtok --state Sikkim --country India` creates `locations/gangtok/` with
+`config.yaml` (risk weights and thresholds), an empty `geofences.geojson` and `guide.todo.json`. Fill in the guide, draw the
+safety zones, rename `guide.todo.json` to `guide.json` and restart: the city appears on the site, travellers can register for
+it, and its zones are loaded for scoring. No code changes. `python -m pytest tests` checks every guide for missing fields.
 
 Risk weights are configured in each location YAML and are an MVP decision-support score, not a calibrated probability.
 

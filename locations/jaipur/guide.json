@@ -1,0 +1,148 @@
+{
+  "slug": "jaipur",
+  "name": "Jaipur",
+  "state": "Rajasthan",
+  "wiki": "Jaipur",
+  "tagline": "The Pink City: hill forts, a royal observatory and bazaars built on a grid.",
+  "intro": "Jaipur was laid out in 1727 as a planned city of broad streets and walled bazaars, and painted pink in 1876. Mornings belong to the forts on the ridges, afternoons to the Old City's palaces, and evenings to sunset at Nahargarh and dinner over kachori and ghewar.",
+  "center": [26.9240, 75.8240],
+  "zoom": 13,
+  "timezone": "Asia/Kolkata",
+  "checked": "November 2026",
+  "facts": {
+    "best_time": "October to March. Summer afternoons pass 40°C.",
+    "getting_there": "Jaipur International Airport (Sanganer) is about 13 km south of the Old City. Jaipur Junction has trains from Delhi in about 4–5 hours.",
+    "getting_around": "Use app cabs or the prepaid auto booth at the station. Agree a fare before boarding any auto.",
+    "languages": "Hindi and Rajasthani; English is widely spoken around the monuments."
+  },
+  "emergency": [
+    {"label": "Police, fire, ambulance", "number": "112", "note": "National emergency number, works from any phone"},
+    {"label": "Ambulance", "number": "108"},
+    {"label": "Tourist helpline", "number": "1363", "note": "Ministry of Tourism, 24x7, 12 languages. Toll-free 1800-11-1363"},
+    {"label": "Women helpline", "number": "181"},
+    {"label": "Rail Madad (trains and stations)", "number": "139"},
+    {"label": "Cyber fraud", "number": "1930"}
+  ],
+  "safety_tips": [
+    "Gem scams are common: never agree to buy stones to \"resell abroad\" or to carry goods for a stranger.",
+    "Hire guides only if they show a government licence card. Ignore touts at the fort gates.",
+    "The Nahargarh hill road is winding and unlit. Come down soon after sunset, by cab, not on foot.",
+    "In the Old City bazaars keep your bag in front of you, and watch for motorbikes in the lanes."
+  ],
+  "places": [
+    {
+      "id": "amer-fort", "name": "Amer Fort", "category": "heritage", "area": "Amer, 11 km north", "must": true,
+      "lat": 26.9855, "lon": 75.8513, "wiki": "Amer_Fort",
+      "summary": "A hill fort-palace of pale sandstone and marble above Maota Lake, part of the Hill Forts of Rajasthan World Heritage Site. Don't miss the mirror hall, Sheesh Mahal.",
+      "hours": {"open": "08:00", "close": "17:30", "closed": [], "note": "Separate evening visit and light show."},
+      "fee": {"indian": "₹200 (2026 rate)", "foreign": "Check at the counter"},
+      "visit_min": 180, "best": "At opening time, before the crowds and heat",
+      "tips": ["Elephant rides raise animal-welfare concerns. Walk up the ramp or take a jeep.", "Ask about the 2-day composite ticket, which covers several monuments."],
+      "safety": "Steep ramps and low parapets. Hold children's hands. Use only licensed guides with ID cards."
+    },
+    {
+      "id": "hawa-mahal", "name": "Hawa Mahal", "category": "heritage", "area": "Old City", "must": true,
+      "lat": 26.9239, "lon": 75.8267, "wiki": "Hawa_Mahal",
+      "summary": "The honeycomb facade of 953 small windows built so royal women could watch street life unseen. Climb to the top for views over the bazaars.",
+      "hours": {"open": "09:00", "close": "17:00", "closed": []},
+      "fee": {"indian": "₹100 (2026 rate)", "foreign": "₹600"},
+      "visit_min": 60, "best": "Early morning, when sun lights the facade",
+      "tips": ["For the classic photo, go to a rooftop cafe across the road."],
+      "safety": "Very busy road outside. Cross at the signals."
+    },
+    {
+      "id": "city-palace", "name": "City Palace", "category": "heritage", "area": "Old City", "must": true,
+      "lat": 26.9258, "lon": 75.8237, "wiki": "City_Palace,_Jaipur",
+      "summary": "The royal family's palace complex at the heart of the Old City, with courtyards, painted gateways and museums of textiles and weapons.",
+      "hours": {"open": "09:30", "close": "17:00", "closed": []},
+      "fee": {"indian": "Separate ticket (privately run)", "foreign": "Separate ticket (privately run)"},
+      "visit_min": 120, "best": "Late morning",
+      "tips": ["Look for the four painted gates of the Pritam Niwas Chowk courtyard."],
+      "safety": "Safe and staffed."
+    },
+    {
+      "id": "jantar-mantar", "name": "Jantar Mantar", "category": "heritage", "area": "Old City", "must": true,
+      "lat": 26.9248, "lon": 75.8246, "wiki": "Jantar_Mantar,_Jaipur",
+      "summary": "An 18th-century observatory of giant stone instruments, including one of the world's largest sundials. A World Heritage Site.",
+      "hours": {"open": "09:00", "close": "16:30", "closed": []},
+      "fee": {"indian": "₹100 (2026 rate)", "foreign": "₹600"},
+      "visit_min": 60, "best": "Around midday, when the sundials work best",
+      "tips": ["Take a guide or audio guide; the instruments make much more sense with an explanation."],
+      "safety": "No shade. Bring a hat and water."
+    },
+    {
+      "id": "nahargarh", "name": "Nahargarh Fort", "category": "heritage", "area": "Aravalli ridge",
+      "lat": 26.9373, "lon": 75.8155, "wiki": "Nahargarh_Fort",
+      "summary": "A ridge-top fort with the best sunset view over the Pink City, and a palace of identical suites built for the king's queens.",
+      "hours": {"open": "10:00", "close": "17:30", "closed": []},
+      "fee": {"indian": "₹100 (2026 rate)", "foreign": "₹600"},
+      "visit_min": 90, "best": "Arrive by 16:30 for sunset",
+      "tips": ["Book your return cab before sunset; drivers get scarce afterwards."],
+      "safety": "The hill road is winding and unlit. Leave soon after sunset and avoid walking down."
+    },
+    {
+      "id": "albert-hall", "name": "Albert Hall Museum", "category": "museum", "area": "Ram Niwas Garden",
+      "lat": 26.9116, "lon": 75.8195, "wiki": "Albert_Hall_Museum",
+      "summary": "Rajasthan's oldest museum, in an Indo-Saracenic building, with miniature paintings, carpets and an Egyptian mummy. Beautifully lit at night.",
+      "hours": {"open": "09:00", "close": "17:00", "closed": [], "note": "Night visits also run in the evening."},
+      "fee": {"indian": "₹100 (2026 rate)", "foreign": "₹600"},
+      "visit_min": 75, "best": "Late afternoon, then see it lit up",
+      "tips": ["Eat at Masala Chowk in the same garden afterwards."],
+      "safety": "Busy and well lit in the evenings."
+    },
+    {
+      "id": "jal-mahal", "name": "Jal Mahal", "category": "nature", "area": "Amer Road",
+      "lat": 26.9535, "lon": 75.8462, "wiki": "Jal_Mahal",
+      "summary": "A palace that appears to float in Man Sagar Lake. It is not open inside; enjoy the view from the lakeside promenade on the way to Amer.",
+      "hours": {"text": "Promenade open all day"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 30, "best": "Early morning or at dusk",
+      "tips": ["A quick photo stop on the road between the Old City and Amer."],
+      "safety": "Hawkers are persistent; a firm \"no thanks\" works."
+    },
+    {
+      "id": "galtaji", "name": "Galtaji (Monkey Temple)", "category": "faith", "area": "8 km east",
+      "lat": 26.9172, "lon": 75.8590, "wiki": "Galtaji",
+      "summary": "A string of temples and sacred water tanks in a gorge east of the city, home to hundreds of macaques.",
+      "hours": {"open": "05:00", "close": "21:00", "closed": []},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 75, "best": "Late afternoon",
+      "tips": ["Don't carry food in your hands. The monkeys will take it."],
+      "safety": "The trail over the hill is isolated. Visit before dusk and go back the way you came."
+    },
+    {
+      "id": "johari-bazaar", "name": "Johari and Bapu Bazaars", "category": "market", "area": "Old City",
+      "lat": 26.9200, "lon": 75.8240, "wiki": "Johari_Bazaar",
+      "summary": "Arcaded bazaars of the walled city for block-printed textiles, mojari shoes, lac bangles and silver.",
+      "hours": {"text": "About 10:30 to 21:00; some shops close on Sunday"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 120, "best": "Late afternoon into evening",
+      "tips": ["Bargain, especially for textiles."],
+      "safety": "Crowded. Be wary of anyone steering you to a \"cousin's gem shop\"."
+    }
+  ],
+  "food": [
+    {"id": "lmb", "name": "Laxmi Mishthan Bhandar (LMB)", "kind": "sweets", "veg": "veg", "price": "₹₹", "area": "Johari Bazaar",
+     "lat": 26.9197, "lon": 75.8253, "known_for": "A Johari Bazaar institution for ghewar, kachori and Rajasthani thalis."},
+    {"id": "rawat", "name": "Rawat Mishthan Bhandar", "kind": "sweets", "veg": "veg", "price": "₹", "area": "Station Road",
+     "lat": 26.9214, "lon": 75.7985, "known_for": "Jaipur's famous pyaaz (onion) kachori, mirchi vada and mawa kachori."},
+    {"id": "lassiwala", "name": "Lassiwala", "kind": "street", "veg": "veg", "price": "₹", "area": "MI Road",
+     "lat": 26.9175, "lon": 75.8105, "known_for": "Thick lassi in clay cups. Go early; it can sell out."},
+    {"id": "masala-chowk", "name": "Masala Chowk", "kind": "street", "veg": "both", "price": "₹", "area": "Ram Niwas Garden",
+     "lat": 26.9110, "lon": 75.8172, "known_for": "Open-air food court of well-known street-food stalls, next to Albert Hall."},
+    {"id": "tapri", "name": "Tapri Central", "kind": "cafe", "veg": "veg", "price": "₹₹", "area": "C-Scheme",
+     "lat": 26.9040, "lon": 75.8060, "known_for": "Rooftop chai and snacks overlooking Central Park."},
+    {"id": "chokhi-dhani", "name": "Chokhi Dhani", "kind": "restaurant", "veg": "veg", "price": "₹₹₹", "area": "Tonk Road, 22 km south",
+     "lat": 26.7666, "lon": 75.8370, "known_for": "A village-style resort with folk dance, puppet shows and an unlimited Rajasthani thali in the evenings."}
+  ],
+  "stays": [
+    {"id": "rambagh", "name": "Rambagh Palace", "kind": "heritage", "price": "₹₹₹", "area": "Bhawani Singh Road",
+     "lat": 26.8980, "lon": 75.8080, "note": "The former royal residence, now a palace hotel with large gardens."},
+    {"id": "old-city-havelis", "name": "Old City havelis", "kind": "area", "price": "₹₹", "area": "Walled city",
+     "lat": 26.9230, "lon": 75.8215, "note": "Converted mansions within walking distance of the bazaars. Lively and noisy."},
+    {"id": "mi-road", "name": "MI Road and C-Scheme", "kind": "area", "price": "₹₹", "area": "Central Jaipur",
+     "lat": 26.9120, "lon": 75.8050, "note": "Mid-range hotels between the station and Old City, with plenty of restaurants."},
+    {"id": "bani-park", "name": "Bani Park guesthouses", "kind": "area", "price": "₹", "area": "Bani Park",
+     "lat": 26.9280, "lon": 75.7930, "note": "Quiet residential area near the station with family-run guesthouses."}
+  ]
+}

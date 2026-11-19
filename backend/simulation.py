@@ -1,5 +1,5 @@
 """Demo replay: each demo tourist replays a real(ish) processed trajectory, one fix per tick."""
-import json
+import json, os
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 from .database import ROOT
@@ -16,7 +16,7 @@ def _load():
         return
     d = pd.read_csv(f, parse_dates=['timestamp'])
     risky = []
-    gj = ROOT / 'locations' / 'bhopal' / 'geofences.geojson'
+    gj = ROOT / 'locations' / os.getenv('DEFAULT_LOCATION', 'bhopal') / 'geofences.geojson'
     if gj.exists():
         for f in json.loads(gj.read_text())['features']:
             if f['properties'].get('risk_level', 0) >= 0.6:

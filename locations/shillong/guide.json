@@ -1,0 +1,147 @@
+{
+  "slug": "shillong",
+  "name": "Shillong",
+  "state": "Meghalaya",
+  "wiki": "Shillong",
+  "tagline": "Pine hills, waterfalls and Khasi kitchens in the capital of Meghalaya.",
+  "intro": "Shillong sits at about 1,500 m in the Khasi Hills, cool all year and green after the monsoon. Use it as a base for waterfalls, canyon views and sacred forests a short drive away, and come back each evening for jadoh, live music and the bustle of Police Bazaar.",
+  "center": [25.5750, 91.8850],
+  "zoom": 13,
+  "timezone": "Asia/Kolkata",
+  "checked": "November 2026",
+  "facts": {
+    "best_time": "October to April for clear views. June to September for waterfalls at full flow, with landslide risk on hill roads.",
+    "getting_there": "Most visitors fly into Guwahati (about 100 km, 3 hours by road). Shillong Airport at Umroi is about 30 km away with fewer flights.",
+    "getting_around": "Shared and private taxis; hire a local driver for day trips. Traffic around Police Bazaar is slow at peak hours.",
+    "languages": "Khasi; English is widely spoken. Hindi is understood in shops and taxis."
+  },
+  "emergency": [
+    {"label": "Police, fire, ambulance", "number": "112", "note": "National emergency number, works from any phone"},
+    {"label": "Ambulance", "number": "108"},
+    {"label": "Tourist helpline", "number": "1363", "note": "Ministry of Tourism, 24x7, 12 languages. Toll-free 1800-11-1363"},
+    {"label": "Women helpline", "number": "181"},
+    {"label": "Cyber fraud", "number": "1930"}
+  ],
+  "safety_tips": [
+    "Fog rolls in fast in the afternoon. Start day trips early and stay back from unfenced edges at viewpoints.",
+    "Waterfall steps get very slippery. Wear shoes with grip, especially in the monsoon.",
+    "Many shops and restaurants close on Sunday. Plan meals ahead.",
+    "Sacred forests have strict local rules: take nothing out, not even a leaf, and go with a village guide."
+  ],
+  "places": [
+    {
+      "id": "wards-lake", "name": "Ward's Lake", "category": "nature", "area": "Police Bazaar", "must": true,
+      "lat": 25.5762, "lon": 91.8856, "wiki": "Ward's_Lake",
+      "summary": "A horseshoe-shaped lake and garden from the British era, a few minutes' walk from Police Bazaar. Walk the paths or feed the fish from the wooden bridge.",
+      "hours": {"text": "Daytime; hours vary by season"},
+      "fee": {"indian": "Small entry fee", "foreign": "Small entry fee"},
+      "visit_min": 60, "best": "Late morning",
+      "tips": ["Buy puffed rice at the gate to feed the fish."],
+      "safety": "Central and busy during the day."
+    },
+    {
+      "id": "don-bosco", "name": "Don Bosco Museum", "category": "museum", "area": "Mawlai", "must": true,
+      "lat": 25.5958, "lon": 91.8912, "wiki": "Don_Bosco_Centre_for_Indigenous_Cultures",
+      "summary": "Seven floors on the cultures of the North East's many communities: dress, weapons, crafts and homes. Finish on the rooftop skywalk over the city.",
+      "hours": {"open": "09:00", "close": "17:30", "closed": ["Sun"]},
+      "fee": {"indian": "About ₹100", "foreign": "About ₹300"},
+      "visit_min": 150, "best": "Morning",
+      "tips": ["Allow two to three hours; it's larger than it looks."],
+      "safety": "Safe and staffed."
+    },
+    {
+      "id": "elephant-falls", "name": "Elephant Falls", "category": "nature", "area": "Upper Shillong, 12 km", "must": true,
+      "lat": 25.5384, "lon": 91.8247, "wiki": "Elephant_Falls",
+      "summary": "A three-tier waterfall in a fern-covered gorge. Steps lead down to each level.",
+      "hours": {"open": "09:00", "close": "17:00", "closed": []},
+      "fee": {"indian": "₹20 (camera ₹20)", "foreign": "₹20 (camera ₹20)"},
+      "visit_min": 75, "best": "Morning; the falls are fullest after the monsoon",
+      "tips": ["Combine with Shillong Peak, on the same road."],
+      "safety": "Steps are steep and slippery when wet. Don't climb on the rocks at the base."
+    },
+    {
+      "id": "shillong-peak", "name": "Shillong Peak", "category": "nature", "area": "Upper Shillong",
+      "lat": 25.5490, "lon": 91.8640, "wiki": "Shillong_Peak",
+      "summary": "The highest point near the city, with views over Shillong and the Khasi Hills on a clear day.",
+      "hours": {"open": "09:00", "close": "15:30", "closed": []},
+      "fee": {"indian": "About ₹20", "foreign": "About ₹50"},
+      "visit_min": 60, "best": "Morning, before the clouds come in",
+      "tips": ["The peak is inside an Indian Air Force area. Carry a photo ID."],
+      "safety": "Follow Air Force rules and don't photograph military installations."
+    },
+    {
+      "id": "umiam-lake", "name": "Umiam Lake (Barapani)", "category": "nature", "area": "15 km north", "must": true,
+      "lat": 25.6560, "lon": 91.8890, "wiki": "Umiam_Lake",
+      "summary": "A large reservoir framed by pine hills on the road from Guwahati, with boating, kayaking and lakeside viewpoints.",
+      "hours": {"open": "09:00", "close": "17:00", "closed": [], "note": "Hours shown are for water sports."},
+      "fee": {"indian": "Free (activities extra)", "foreign": "Free (activities extra)"},
+      "visit_min": 120, "best": "Afternoon",
+      "tips": ["Stop here on your way in from Guwahati."],
+      "safety": "Always wear the life jacket. Lake edges are isolated after dark."
+    },
+    {
+      "id": "police-bazaar", "name": "Police Bazaar", "category": "market", "area": "City centre",
+      "lat": 25.5770, "lon": 91.8830, "wiki": "Police_Bazaar",
+      "summary": "Shillong's busy shopping and eating hub, with hotels, cafes and street-food stalls around a pedestrian square.",
+      "hours": {"text": "Morning to about 20:00; many shops close on Sunday"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 90, "best": "Early evening",
+      "tips": ["Try local snacks from the stalls around the square."],
+      "safety": "Crowded and congested. Mind your belongings."
+    },
+    {
+      "id": "laitlum", "name": "Laitlum Canyons", "category": "daytrip", "area": "25 km south-east", "must": true,
+      "lat": 25.4680, "lon": 91.9300, "wiki": "Laitlum_Canyons",
+      "summary": "A ridge where the hills drop away into deep green valleys. A long stairway leads down to Rasong village far below.",
+      "hours": {"text": "Sunrise to sunset"},
+      "fee": {"indian": "Free or a small village fee", "foreign": "Free or a small village fee"},
+      "visit_min": 120, "best": "Early morning, before fog",
+      "tips": ["The stairway down is long. Only go down if you're fit for the climb back up."],
+      "safety": "Cliff edges are unfenced and fog arrives quickly. Stay well back from the edge."
+    },
+    {
+      "id": "cathedral", "name": "Cathedral of Mary Help of Christians", "category": "faith", "area": "Laitumkhrah",
+      "lat": 25.5735, "lon": 91.8955, "wiki": "Cathedral_of_Mary_Help_of_Christians,_Shillong",
+      "summary": "A blue-and-white cathedral on a hill, rebuilt in the 1940s after a fire, with stained glass and terracotta reliefs.",
+      "hours": {"text": "Daytime; respect service times"},
+      "fee": {"indian": "Free", "foreign": "Free"},
+      "visit_min": 30, "best": "Weekday mornings",
+      "tips": ["Laitumkhrah's cafes are a short walk away."],
+      "safety": "Safe and central."
+    },
+    {
+      "id": "mawphlang", "name": "Mawphlang Sacred Forest", "category": "daytrip", "area": "25 km south-west",
+      "lat": 25.4460, "lon": 91.7480, "wiki": "Mawphlang",
+      "summary": "An old-growth forest protected by Khasi tradition for centuries, with monoliths and huge moss-covered trees.",
+      "hours": {"text": "Daytime; guided walks only"},
+      "fee": {"indian": "Guide fee", "foreign": "Guide fee"},
+      "visit_min": 120, "best": "Morning",
+      "tips": ["Hire a guide at the village entrance. Walks take one to two hours."],
+      "safety": "Nothing may be taken out of the forest. Stay with your guide on the trail."
+    }
+  ],
+  "food": [
+    {"id": "trattoria", "name": "Trattoria", "kind": "restaurant", "veg": "non-veg", "price": "₹", "area": "Police Bazaar",
+     "lat": 25.5775, "lon": 91.8826, "known_for": "Small, no-frills Khasi kitchen loved by locals: jadoh, dohneiiong and Khasi thalis. Food sells out early."},
+    {"id": "jadoh", "name": "Jadoh", "kind": "restaurant", "veg": "non-veg", "price": "₹", "area": "Laitumkhrah",
+     "lat": 25.5722, "lon": 91.8968, "known_for": "Named after the dish: red rice cooked with pork or chicken, plus Khasi sides."},
+    {"id": "iewduh", "name": "Iewduh (Bara Bazaar) food stalls", "kind": "street", "veg": "non-veg", "price": "₹", "area": "Iewduh",
+     "lat": 25.5812, "lon": 91.8775, "known_for": "Stalls deep inside Shillong's oldest and largest market. Go in daytime."},
+    {"id": "laitumkhrah-street", "name": "Laitumkhrah street food", "kind": "street", "veg": "both", "price": "₹", "area": "Laitumkhrah",
+     "lat": 25.5715, "lon": 91.8985, "known_for": "Evening momos, smoked-pork noodles and fried snacks."},
+    {"id": "city-hut", "name": "City Hut Family Dhaba", "kind": "restaurant", "veg": "both", "price": "₹₹", "area": "Police Bazaar",
+     "lat": 25.5795, "lon": 91.8848, "known_for": "Large family restaurant with Indian, Chinese and vegetarian choices."},
+    {"id": "jiva", "name": "Jiva Veg", "kind": "restaurant", "veg": "veg", "price": "₹₹", "area": "Police Bazaar",
+     "lat": 25.5768, "lon": 91.8835, "known_for": "Pure-vegetarian South and North Indian food."}
+  ],
+  "stays": [
+    {"id": "ri-kynjai", "name": "Ri Kynjai – Serenity by the Lake", "kind": "luxury", "price": "₹₹₹", "area": "Umiam Lake",
+     "lat": 25.6610, "lon": 91.8950, "note": "Cottages above Umiam Lake in Khasi style. 30 minutes from the city."},
+    {"id": "orchid-lake", "name": "Orchid Lake Resort", "kind": "government", "price": "₹₹", "area": "Umiam Lake",
+     "lat": 25.6520, "lon": 91.8885, "note": "Run by Meghalaya Tourism, on the lake shore."},
+    {"id": "police-bazaar-hotels", "name": "Police Bazaar hotels", "kind": "area", "price": "₹₹", "area": "City centre",
+     "lat": 25.5765, "lon": 91.8840, "note": "Walk to everything. Expect noise and traffic."},
+    {"id": "laitumkhrah-stays", "name": "Laitumkhrah guesthouses and hostels", "kind": "area", "price": "₹", "area": "Laitumkhrah",
+     "lat": 25.5725, "lon": 91.8980, "note": "Quieter streets with cafes and music bars. Popular with backpackers."}
+  ]
+}
