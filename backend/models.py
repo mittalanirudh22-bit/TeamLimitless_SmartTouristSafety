@@ -102,6 +102,19 @@ class Incident(Base):
     description = Column(Text)
     created_at = Column(DateTime(timezone=True), default=now)
     resolved_at = Column(DateTime(timezone=True))
+    category = Column(String)  # SOS triage label: medical, harassment, theft, lost, accident, other
+    message = Column(Text)     # the traveller's own words (typed or spoken), newest last
+
+
+class ShareLink(Base):
+    """A view-only link a traveller gives family. Only a hash of the token is stored."""
+    __tablename__ = 'share_links'
+    id = Column(PK, primary_key=True, autoincrement=True)
+    tourist_id = Column(String, ForeignKey('tourists.tourist_id'), index=True)
+    token_hash = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True))
 
 
 class IncidentAudit(Base):
@@ -157,3 +170,4 @@ class TouristState(Base):
     factors = Column(JSON)
     trail = Column(JSON)   # last ~40 [lat, lon] points, oldest first
     recent = Column(JSON)  # last 3 fixes with derived features, oldest first
+    last_seen_at = Column(DateTime(timezone=True))  # server time of the last request from the phone, even a weak fix

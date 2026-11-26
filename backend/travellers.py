@@ -1,12 +1,12 @@
 """Traveller-facing API: register -> blockchain ID -> opt-in tracking."""
 import hashlib, json, os, secrets, time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from . import guide, ingest, ledger, models as m, scoring
+from . import guide, ingest, ledger, models as m, scoring, triage
 from .database import get_db
-from .service import finish, incident_out, iso, open_incident, process_fix, queue_block
+from .service import audit, finish, incident_out, iso, open_incident, process_fix, queue_block
 
 router = APIRouter()
 DEFAULT_LOCATION = os.getenv('DEFAULT_LOCATION', 'bhopal')
@@ -42,6 +42,15 @@ class SosIn(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     description: str | None = Field(None, max_length=300)
+    message: str | None = Field(None, max_length=500)  # what's happening, typed or spoken, any language
+
+
+class SosMessageIn(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
+class ShareIn(BaseModel):
+    hours: int = Field(24, ge=1, le=72)
 
 
 def chain_id(block_hash: str) -> str:
@@ -187,13 +196,18 @@ def location(fix: FixIn, who=Depends(traveller_light)):
     tid, status = who
     if status != 'TRACKING':
         raise HTTPException(409, 'tracking has not been started')
-    if fix.accuracy is not None and fix.accuracy > 150:
-        return {'ignored': 'GPS accuracy too low', 'accuracy_m': fix.accuracy}
+    now = datetime.now(timezone.utc)
+    weak = fix.accuracy is not None and fix.accuracy > 150
+    entry = dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or now).isoformat(), seen=now.isoformat(),
+                 battery=fix.battery, acc=fix.accuracy)
+    if weak:  # too vague to place the traveller, but it still proves the phone is alive (keeps the watchdog quiet)
+        entry |= dict(heartbeat=True, ts=now.isoformat())
     try:
-        ingest.enqueue(dict(tid=tid, lat=fix.latitude, lon=fix.longitude, ts=(fix.timestamp or datetime.now(timezone.utc)).isoformat(),
-                            battery=fix.battery))
+        ingest.enqueue(entry)
     except ingest.Backpressure:
         raise HTTPException(503, 'Server busy; retry shortly.', headers={'Retry-After': '5'})
+    if weak:
+        return {'queued': True, 'ignored': 'GPS accuracy too low', 'accuracy_m': fix.accuracy, 'counted_as_alive': True}
     return {'queued': True}
 
 
@@ -203,5 +217,77 @@ def sos(body: SosIn, who=Depends(current_traveller), db: Session = Depends(get_d
     res = scoring.assess(db, t, body.latitude, body.longitude, datetime.now(timezone.utc), sos=1.0)
     inc = open_incident(db, t.tourist_id, 'SOS', 'CRITICAL', body.latitude, body.longitude,
                         body.description or 'Traveller pressed SOS')
+    if body.message:
+        _triage(db, t, inc, body.message)
     finish(db)
     return res | {'incident': incident_out(inc)}
+
+
+def _triage(db, t, inc, text):
+    """Label an SOS from the traveller's own words. Labels and flags only: the SOS stays CRITICAL."""
+    try:
+        g = guide.get_guide(t.location_slug)
+    except HTTPException:
+        g = None
+    inc.message = ((inc.message + '\n') if inc.message else '') + text.strip()[:500]
+    every = [triage.classify(x, g) for x in inc.message.split('\n')]  # summarise all messages, not just the latest
+    r = every[-1]
+    cats = list(dict.fromkeys(x['category'] for x in every if x['category'] != 'other')) or ['other']
+    places = list(dict.fromkeys(p['name'] for x in every for p in x['places']))
+    urgent = any(x['urgent'] for x in every)
+    inc.category = cats[-1]
+    where = f" Mentions: {', '.join(places)}." if places else ''
+    inc.description = (f"SOS: {', then '.join(triage.CATEGORIES[c] for c in cats)}{', possibly life-threatening' if urgent else ''}. "
+                       f"Latest: \"{text.strip()[:160]}\"{where}")
+    audit(db, inc, 'UPDATED', 'traveller', {'category': inc.category, 'urgent': r['urgent'], 'confidence': r['confidence']})
+    return r
+
+
+@router.post('/me/sos/message')
+def sos_message(body: SosMessageIn, who=Depends(current_traveller), db: Session = Depends(get_db)):
+    """Add what's happening to an SOS already raised, so one tap is never delayed by typing."""
+    reg, t = who
+    inc = (db.query(m.Incident).filter(m.Incident.tourist_id == t.tourist_id, m.Incident.incident_type == 'SOS',
+                                       m.Incident.status != 'RESOLVED').order_by(m.Incident.id.desc()).first())
+    if not inc:
+        raise HTTPException(404, 'No open SOS. Press SOS first.')
+    r = _triage(db, t, inc, body.text)
+    finish(db)
+    return {'incident': incident_out(inc), 'triage': r}
+
+
+@router.post('/me/share')
+def create_share(body: ShareIn, who=Depends(current_traveller), db: Session = Depends(get_db)):
+    """A view-only link to the traveller's live location for family. The token is shown once; only its hash is kept."""
+    reg, t = who
+    now = datetime.now(timezone.utc)
+    active = db.query(m.ShareLink).filter(m.ShareLink.tourist_id == t.tourist_id, m.ShareLink.revoked_at.is_(None),
+                                          m.ShareLink.expires_at > now).count()
+    if active >= 5:
+        raise HTTPException(409, 'You already have 5 active share links. Stop one first.')
+    token = secrets.token_urlsafe(18)
+    link = m.ShareLink(tourist_id=t.tourist_id, token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                       created_at=now, expires_at=now + timedelta(hours=body.hours))
+    db.add(link)
+    db.commit()
+    return dict(id=link.id, token=token, expires_at=iso(link.expires_at))
+
+
+@router.get('/me/share')
+def list_shares(who=Depends(current_traveller), db: Session = Depends(get_db)):
+    reg, t = who
+    now = datetime.now(timezone.utc)
+    rows = db.query(m.ShareLink).filter(m.ShareLink.tourist_id == t.tourist_id, m.ShareLink.revoked_at.is_(None),
+                                        m.ShareLink.expires_at > now).order_by(m.ShareLink.id)
+    return [dict(id=r.id, created_at=iso(r.created_at), expires_at=iso(r.expires_at)) for r in rows]
+
+
+@router.delete('/me/share/{link_id}')
+def revoke_share(link_id: int, who=Depends(current_traveller), db: Session = Depends(get_db)):
+    reg, t = who
+    link = db.get(m.ShareLink, link_id)
+    if not link or link.tourist_id != t.tourist_id:
+        raise HTTPException(404, 'share link not found')
+    link.revoked_at = datetime.now(timezone.utc)
+    db.commit()
+    return {'revoked': link_id}

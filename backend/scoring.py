@@ -9,7 +9,7 @@ from shapely import STRtree
 from shapely.geometry import Point, shape
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from . import models as m
+from . import gps, models as m
 from .database import ROOT
 from ml.fast_iforest import FastScorer
 from ml.risk_engine import calculate_risk
@@ -163,21 +163,37 @@ def assess_batch(db: Session, items):
         if w['updated'] is not None and ts == w['updated']:
             rows.append(dict(i=i, dup=True))
             continue
+        newest = w['updated'] is None or ts >= w['updated']
+        var = None
+        # Clean up phone GPS (fixes that report an accuracy radius). An SOS position, replayed demo data and
+        # server-side feeds without accuracy are used exactly as sent.
+        if newest and not it.get('sos') and it.get('acc') is not None:
+            prev = w['recent'][-1] if w['recent'] else None
+            f_lat, f_lon, var, verdict = gps.filter_fix(prev, lat, lon, it.get('acc'), ts)
+            if verdict == 'jump':  # hold back an impossible jump until another fix confirms it
+                w['recent'] = w['recent'][:-1] + [{**prev, 'pending': [lat, lon, ts.isoformat()]}]
+                w['dirty'] = True
+                rows.append(dict(i=i, jump=True))
+                continue
+            lat, lon = f_lat, f_lon
         feats, speed, accel, turn, inactivity = _features([SimpleNamespace(**r) for r in w['recent']][::-1], lat, lon, ts)
         rows.append(dict(i=i, t=t, lat=lat, lon=lon, ts=ts, feats=feats, speed=speed, accel=accel, turn=turn,
                          inactivity=inactivity, sos=float(it.get('sos', 0.0)), hour=it.get('hour')))
-        if w['updated'] is None or ts >= w['updated']:  # only the newest fix advances "latest"
+        if newest:  # only the newest fix advances "latest"
             w['recent'] = w['recent'][-2:] + [dict(ts=ts.isoformat(), lat=lat, lon=lon, speed=speed, inactivity=inactivity,
-                                                    battery=it.get('battery'))]
+                                                    battery=it.get('battery'), var=var)]
             w['trail'] = w['trail'][-39:] + [[lat, lon]]
             w['updated'], w['last_i'] = ts, i
 
-    live = [r for r in rows if not r.get('dup')]
+    live = [r for r in rows if not r.get('dup') and not r.get('jump')]
     scores = iter(_anomaly_scores([r['feats'] for r in live if r['feats']]))
     results = [None] * len(items)
     for r in rows:
         if r.get('dup'):
             results[r['i']] = dict(duplicate=True)
+            continue
+        if r.get('jump'):
+            results[r['i']] = dict(ignored='gps_jump')
             continue
         t, ts, lat, lon = r['t'], r['ts'], r['lat'], r['lon']
         anomaly = next(scores) if r['feats'] else 0.0
@@ -214,6 +230,8 @@ def assess_batch(db: Session, items):
     for tid, w in work.items():
         fin = w.get('final')
         if not fin:
+            if w.get('dirty') and states.get(tid):  # only a held-back jump this batch: remember it for confirmation
+                states[tid].recent = w['recent']
             continue
         st = states.get(tid) or m.TouristState(tourist_id=tid)
         st.latitude, st.longitude, st.speed_kmh, st.updated_at = fin['lat'], fin['lon'], fin['speed'], fin['ts']

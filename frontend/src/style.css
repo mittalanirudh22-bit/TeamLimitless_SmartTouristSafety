@@ -308,3 +308,22 @@ code { background: var(--paper); padding: 1px 5px; border-radius: 4px; }
   .safety-strip { padding: 20px; }
   .city-tile h2 { font-size: 38px; }
 }
+
+/* ---------- SOS details, offline SOS, family sharing ---------- */
+.sos-details { border: 2px solid var(--signal); border-radius: 10px; padding: 12px 14px; background: var(--signal-soft); }
+.sos-details h3 { margin-top: 0; }
+.sos-details textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--card); color: var(--fg); }
+.lang-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+button.listening { background: var(--signal); border-color: var(--signal); }
+.offline-sos { border-top: 1px dashed var(--line); padding-top: 10px; font-size: 15px; }
+.sos-sms { background: var(--signal); border-color: var(--signal); }
+.sos-sms:hover { background: #B81E33; }
+.family-share { margin: 16px 0; }
+.share-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.share-list li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.share-status { padding: 12px 16px; border-radius: 10px; font-size: 17px; font-weight: 500; }
+.share-live { background: var(--leaf-soft); } .share-off { background: var(--line); }
+.share-lost { background: var(--marigold-soft); } .share-sos { background: var(--signal); color: #fff; }
+.cat { margin-left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 99px; background: var(--marigold-soft); color: var(--fg); }
+.cat-medical, .cat-harassment, .cat-accident { background: var(--signal-soft); color: var(--signal); }
+td.desc { white-space: normal; min-width: 280px; }

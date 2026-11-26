@@ -74,7 +74,7 @@ export default function Ops(){
    <section className="card full"><h2>Incidents <small>{incidents.filter(i=>i.status!=='RESOLVED').length} active</small></h2>
     {incidents.length===0?<p className="muted">No incidents.</p>:
     <table><thead><tr><th>#</th><th>Tourist</th><th>Type</th><th>Severity</th><th>Status</th><th>Details</th><th/></tr></thead><tbody>
-     {incidents.map(i=><tr key={i.id}><td>{i.id}</td><td>{i.tourist_id}</td><td>{i.incident_type}</td><td>{i.severity}</td><td>{i.status}</td><td>{i.description}</td>
+     {incidents.map(i=><tr key={i.id}><td>{i.id}</td><td>{i.tourist_id}</td><td>{i.incident_type}{i.category&&<span className={`cat cat-${i.category}`}>{i.category}</span>}</td><td>{i.severity}</td><td>{i.status}</td><td className="desc">{i.description}{i.message&&i.message.includes('\n')&&<small> ({i.message.split('\n').length} messages)</small>}</td>
       <td className="acts">{i.status==='OPEN'&&<button onClick={()=>setStatus(i.id,'ACKNOWLEDGED')}>Acknowledge</button>}
        {i.status!=='RESOLVED'&&<button onClick={()=>setStatus(i.id,'RESOLVED')}>Resolve</button>}</td></tr>)}
     </tbody></table>}

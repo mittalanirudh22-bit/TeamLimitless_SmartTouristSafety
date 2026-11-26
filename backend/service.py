@@ -23,7 +23,7 @@ def require_ops(x_ops_token: str | None = Header(None)):
 def incident_out(i: m.Incident):
     return dict(id=i.id, tourist_id=i.tourist_id, incident_type=i.incident_type, severity=i.severity,
                 latitude=i.latitude, longitude=i.longitude, status=i.status, description=i.description,
-                created_at=iso(i.created_at), resolved_at=iso(i.resolved_at))
+                created_at=iso(i.created_at), resolved_at=iso(i.resolved_at), category=i.category, message=i.message)
 
 
 def queue_block(db, block_type, ref, payload_hash):

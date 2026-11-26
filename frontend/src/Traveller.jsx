@@ -1,6 +1,9 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import MapView from './MapView.jsx';
 import {COLORS,request} from './api.js';
+import {FamilyShare,OfflineSos,SosDetails} from './SafetyExtras.jsx';
+import {recall,store} from './lib.js';
+const PENDING='safetour_pending';
 
 const KEY='limitless_session';
 const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))}catch{return null}};
@@ -62,13 +65,25 @@ function Tracking({token,me,refresh,fences,onStop,guide}){
  // Battery level travels with each fix, so if the phone goes silent the safety team can tell a dead battery from trouble.
  useEffect(()=>{let b0;navigator.getBattery?.().then(b=>{b0=b;const f=()=>{batt.current=Math.round(b.level*100)};f();b.addEventListener('levelchange',f)}).catch(()=>{});
   return()=>{try{b0&&(b0.onlevelchange=null)}catch{}}},[]);
+ const post=b=>request('/api/travellers/me/location',{method:'POST',body:b,headers:{'X-Tracking-Token':token}});
+ // No mobile data (hills, forests): keep locations on the phone and upload them in order when the connection returns.
+ const flush=useCallback(async()=>{
+  const q=recall(PENDING,[]);if(!q.length)return;
+  while(q.length){try{await post(q[0])}catch(e){if(!e.status||e.status===503)break;}q.shift();store(PENDING,q)}
+  store(PENDING,q.length?q:null);if(!q.length)setGps('Back online: saved locations uploaded');
+ },[token]); // eslint-disable-line
+ useEffect(()=>{addEventListener('online',flush);return()=>removeEventListener('online',flush)},[flush]);
  const send=useCallback(async(lat,lon,accuracy,ts)=>{
+  const body={latitude:lat,longitude:lon,timestamp:new Date(ts||Date.now()).toISOString(),...(accuracy!=null?{accuracy}:{}),...(batt.current!=null?{battery:batt.current}:{})};
   try{
-   const body={latitude:lat,longitude:lon,...(accuracy!=null?{accuracy}:{}),...(ts?{timestamp:new Date(ts).toISOString()}:{}),...(batt.current!=null?{battery:batt.current}:{})};
-   const r=await request('/api/travellers/me/location',{method:'POST',body,headers:{'X-Tracking-Token':token}});
-   if(r.ignored)setGps(`Weak GPS signal (±${Math.round(r.accuracy_m)} m) — fix skipped`);
-  }catch(e){setGps(`Could not send location: ${e.message}`)}
- },[token]);
+   await flush();
+   const r=await post(body);
+   if(r.ignored)setGps(`Weak GPS signal (±${Math.round(r.accuracy_m)} m). Location not used, but the safety team knows your phone is on.`);
+  }catch(e){
+   if(!e.status||e.status===503){const q=[...recall(PENDING,[]),body].slice(-300);store(PENDING,q);setGps(`Offline: ${q.length} location(s) saved on this phone, will upload when you're back online`)}
+   else setGps(`Could not send location: ${e.message}`);
+  }
+ },[token,flush]); // eslint-disable-line
  useEffect(()=>{
   if(demo){
    setGps('Demo movement (simulated, not your real location)');
@@ -97,7 +112,7 @@ function Tracking({token,me,refresh,fences,onStop,guide}){
   if(me.latitude==null){setNote('No location yet — wait for a GPS fix, then press SOS.');return}
   if(!confirm('Send an SOS alert to safety operators with your current location?'))return;
   try{await request('/api/travellers/me/sos',{method:'POST',body:{latitude:me.latitude,longitude:me.longitude},headers:{'X-Tracking-Token':token}});setNote('SOS sent. Operators have been alerted.');refresh()}
-  catch(e){setNote('SOS failed: '+e.message)}
+  catch(e){setNote(e.status?'SOS failed: '+e.message:'No internet: the SOS could not be sent. Text it to your emergency contact below, or call 112.')}
  };
  const lvl=me.risk_level;
  return <div className="trackgrid">
@@ -114,6 +129,8 @@ function Tracking({token,me,refresh,fences,onStop,guide}){
    <p className="muted small">ID <b>{me.blockchain_id}</b></p>
    <button className="sos" onClick={sos}>SOS — I need help</button>
    {note&&<p className="note">{note}</p>}
+   {me.incidents?.some(i=>i.incident_type==='SOS')&&<SosDetails token={token} onSent={refresh}/>}
+   <OfflineSos me={me}/>
    <label className="check"><input type="checkbox" checked={demo} onChange={e=>setDemo(e.target.checked)}/><span>Use demo movement (simulated walk, for testing without GPS)</span></label>
    <button className="ghost" onClick={onStop}>Stop tracking</button>
    <p className="muted small">Going to sleep or switching your phone off? Stop tracking first. If your phone goes silent while tracking is on, the safety team is alerted after a few minutes, sooner in a risky zone or at night.</p>
@@ -157,6 +174,7 @@ export default function Traveller({guide}){
   {session&&!me&&<p className="muted">Loading…</p>}
   {me&&me.status==='TRACKING'?<Tracking token={token} me={me} refresh={refresh} fences={fences} guide={guide} onStop={()=>act('stop')}/>
    :me&&<IdCard me={me} busy={busy} onStart={()=>act('start')}/>}
+  {me&&<FamilyShare token={token} me={me}/>}
   <Verify/>
  </section>
 }
