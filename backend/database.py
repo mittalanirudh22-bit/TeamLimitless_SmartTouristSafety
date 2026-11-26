@@ -77,8 +77,26 @@ INDEXES = [
 ]
 
 
+# Columns added after first release. create_all() makes new tables but never alters existing ones.
+COLUMNS = [('tourist_state', 'last_seen_at', 'TIMESTAMP WITH TIME ZONE'),
+           ('incidents', 'category', 'VARCHAR(20)'), ('incidents', 'message', 'TEXT')]
+
+
+def ensure_columns():
+    from sqlalchemy import inspect
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+    for table, col, typ in COLUMNS:
+        if table in tables and col not in {c['name'] for c in insp.get_columns(table)}:
+            try:
+                with engine.begin() as c:
+                    c.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {typ}'))
+            except Exception:  # another process added it first
+                logging.getLogger('database').info('column %s.%s already added', table, col)
+
+
 def ensure_indexes():
-    from sqlalchemy import text
+    ensure_columns()
     with engine.begin() as c:
         for stmt in INDEXES:
             c.execute(text(stmt))

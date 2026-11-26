@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ml.risk_engine import calculate_risk
-from . import guide, ingest, ledger, models as m, retention, scoring, simulation, watchdog
+from . import guide, ingest, ledger, models as m, retention, scoring, share, simulation, triage, watchdog
 from . import database
 from .database import ROOT, SessionLocal, engine, ensure_indexes, get_db
 from .seed import seed_all, DEMO
@@ -27,6 +27,7 @@ async def lifespan(_app):
         seed_all(db, DEFAULT_LOCATION)
     ledger.ensure_genesis()
     ingest.start()
+    triage.model()  # train the small SOS classifier now, not on the first SOS
     stop_retention = retention.start()
     stop_watchdog = watchdog.start()
     yield
@@ -39,6 +40,7 @@ async def lifespan(_app):
 app = FastAPI(title='Team Limitless Smart Tourist Safety API', version='5.0.0', lifespan=lifespan)
 app.include_router(travellers_router, prefix='/api/travellers')
 app.include_router(guide.router, prefix='/api/cities')
+app.include_router(share.router, prefix='/api/share')
 
 
 class RiskRequest(BaseModel):

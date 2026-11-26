@@ -410,6 +410,11 @@ def test_watchdog_flags_silent_phones_and_clears_when_signal_returns(client):
     stopped, hs = tracked(25.4680, 91.9300, battery=60)
     assert ingest.wait_idle()
     client.post('/api/travellers/me/stop', headers=hs)
+    with SessionLocal() as db:  # simulate the phones going quiet back then: forget that the server just heard them
+        from backend import models as m
+        for tid in (calm, risky, dead, stopped):
+            db.get(m.TouristState, tid).last_seen_at = None
+        db.commit()
 
     def check(minutes):
         with SessionLocal() as db:
@@ -444,3 +449,110 @@ def test_unreachable_postgres_falls_back_to_sqlite_but_not_in_the_worker():
     assert out.stdout.split() == ['sqlite', 'True'], out.stderr[-500:]
     out = subprocess.run([sys.executable, '-c', code], env={**env, 'DB_FALLBACK_SQLITE': '0'}, capture_output=True, text=True, timeout=60)
     assert out.stdout.split() == ['postgresql', 'False'], out.stderr[-500:]
+
+
+# ---- GPS clean-up, weak-signal heartbeat, SOS triage, family share links ----
+def _tracked(client, city='bhopal'):
+    r = client.post('/api/travellers/register', json={**BODY, 'city': city}).json()
+    h = {'X-Tracking-Token': r['tracking_token']}
+    client.post('/api/travellers/me/start', headers=h)
+    return r['tourist_id'], h
+
+
+def test_gps_jitter_is_smoothed_and_impossible_jumps_held_back(client):
+    from datetime import datetime, timedelta, timezone
+    from backend.gps import metres
+    _, h = _tracked(client)
+    t0 = datetime(2026, 11, 3, 6, 0, tzinfo=timezone.utc)
+    true = (23.2450, 77.3810)
+    noise = [(0.0004, -0.0003), (-0.0003, 0.0004), (0.0004, 0.0003), (-0.0004, -0.0004), (0.0002, 0.0004)]  # ~40-50 m wobble
+    for k, (dy, dx) in enumerate([(0, 0)] + noise):
+        client.post('/api/travellers/me/location', headers=h, json={'latitude': true[0] + dy, 'longitude': true[1] + dx,
+                    'accuracy': 60, 'timestamp': (t0 + timedelta(seconds=30 * k)).isoformat()})
+        assert ingest.wait_idle()
+    me = client.get('/api/travellers/me', headers=h).json()
+    assert metres(me['latitude'], me['longitude'], *true) < 30  # raw fixes wander 40-50 m; the estimate stays close
+    # a fix 400 km away 30 s later is impossible: held back, position unchanged
+    client.post('/api/travellers/me/location', headers=h, json={'latitude': 26.92, 'longitude': 75.82, 'accuracy': 10,
+                'timestamp': (t0 + timedelta(seconds=210)).isoformat()})
+    assert ingest.wait_idle()
+    assert metres(*[client.get('/api/travellers/me', headers=h).json()[k] for k in ('latitude', 'longitude')], *true) < 30
+    # a second fix agreeing on the new place confirms it (e.g. the phone had no fix during a flight)
+    client.post('/api/travellers/me/location', headers=h, json={'latitude': 26.9201, 'longitude': 75.8201, 'accuracy': 10,
+                'timestamp': (t0 + timedelta(seconds=240)).isoformat()})
+    assert ingest.wait_idle()
+    me = client.get('/api/travellers/me', headers=h).json()
+    assert metres(me['latitude'], me['longitude'], 26.9201, 75.8201) < 50
+
+
+def test_weak_gps_still_counts_as_alive(client):
+    from datetime import datetime, timedelta, timezone
+    from backend import watchdog
+    from backend.database import SessionLocal
+    from backend import models as m
+    now = datetime.now(timezone.utc)
+    quiet, hq = _tracked(client)
+    weak, hw = _tracked(client)
+    for h in (hq, hw):
+        client.post('/api/travellers/me/location', headers=h, json={'latitude': 23.24, 'longitude': 77.39, 'accuracy': 10})
+    assert ingest.wait_idle()
+    with SessionLocal() as db:  # both phones were last heard 20 minutes ago
+        for tid in (quiet, weak):
+            st = db.get(m.TouristState, tid)
+            st.updated_at = st.last_seen_at = now - timedelta(minutes=20)
+        db.commit()
+    r = client.post('/api/travellers/me/location', headers=hw, json={'latitude': 23.24, 'longitude': 77.39, 'accuracy': 400}).json()
+    assert r['ignored'] == 'GPS accuracy too low' and r['counted_as_alive']
+    assert ingest.wait_idle()
+    with SessionLocal() as db:
+        flagged = {o['tourist_id'] for o in watchdog.check(db, now + timedelta(seconds=5))}
+    assert quiet in flagged and weak not in flagged  # indoors with weak GPS is not "no signal"
+
+
+def test_sos_message_is_triaged_in_hindi_and_english(client):
+    _, h = _tracked(client)
+    client.post('/api/travellers/me/location', headers=h, json={'latitude': 23.2633, 'longitude': 77.4030, 'accuracy': 10})
+    assert ingest.wait_idle()
+    assert client.post('/api/travellers/me/sos/message', headers=h, json={'text': 'help'}).status_code == 404  # no SOS yet
+    inc = client.post('/api/travellers/me/sos', headers=h, json={'latitude': 23.2633, 'longitude': 77.4030,
+                      'message': 'mera phone chori ho gaya chowk ke paas'}).json()['incident']
+    assert inc['category'] == 'theft' and inc['severity'] == 'CRITICAL' and 'Chowk Bazaar' in inc['description']
+    r = client.post('/api/travellers/me/sos/message', headers=h, json={'text': 'मेरे दोस्त का खून बह रहा है'}).json()
+    assert r['triage']['category'] == 'medical' and r['triage']['urgent']
+    assert r['incident']['severity'] == 'CRITICAL' and 'life-threatening' in r['incident']['description']
+    assert 'chori' in r['incident']['message'] and 'खून' in r['incident']['message']  # both messages kept for operators
+    assert 'Theft or robbery, then Medical' in r['incident']['description'] and 'Chowk Bazaar' in r['incident']['description']
+
+
+def test_triage_examples():
+    from backend import triage
+    for text, want in [('someone is following me', 'harassment'), ('मेरा बच्चा खो गया', 'lost'), ('bike takra gayi', 'accident'),
+                       ('saans nahi aa rahi', 'medical'), ('jeb kat gayi', 'theft')]:
+        assert triage.classify(text)['category'] == want, text
+
+
+def test_family_share_link(client):
+    from datetime import datetime, timedelta, timezone
+    from backend import models as m
+    from backend.database import SessionLocal
+    tid, h = _tracked(client)
+    client.post('/api/travellers/me/location', headers=h, json={'latitude': 23.25, 'longitude': 77.40, 'accuracy': 10})
+    assert ingest.wait_idle()
+    link = client.post('/api/travellers/me/share', headers=h, json={'hours': 24}).json()
+    view = client.get(f"/api/share/{link['token']}")
+    body = view.text
+    assert view.status_code == 200 and view.json()['name'] == BODY['full_name'].split()[0]
+    assert view.json()['latitude'] is not None and view.json()['signal'] == 'LIVE'
+    assert BODY['phone'] not in body and BODY['emergency_phone'] not in body and tid not in body  # nothing identifying
+    assert [x['id'] for x in client.get('/api/travellers/me/share', headers=h).json()] == [link['id']]
+    client.delete(f"/api/travellers/me/share/{link['id']}", headers=h)
+    assert client.get(f"/api/share/{link['token']}").status_code == 404
+    old = client.post('/api/travellers/me/share', headers=h, json={'hours': 1}).json()
+    with SessionLocal() as db:
+        db.get(m.ShareLink, old['id']).expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        db.commit()
+    assert client.get(f"/api/share/{old['token']}").status_code == 410
+    assert client.get('/api/share/not-a-real-token').status_code == 404
+    for _ in range(5):
+        client.post('/api/travellers/me/share', headers=h, json={'hours': 2})
+    assert client.post('/api/travellers/me/share', headers=h, json={'hours': 2}).status_code == 409

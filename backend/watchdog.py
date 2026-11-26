@@ -29,10 +29,15 @@ LOW_BATTERY = int(os.getenv('SIGNAL_LOW_BATTERY', '10'))
 INTERVAL = int(os.getenv('WATCHDOG_INTERVAL_S', '30'))  # 0 disables the background thread
 
 
+def last_heard(state):
+    """Latest of the last scored fix and the last time the server heard from the phone (weak fixes, offline uploads)."""
+    times = [scoring.as_utc(t) for t in (state.updated_at, getattr(state, 'last_seen_at', None)) if t] if state else []
+    return max(times) if times else None
+
+
 def silent_for(state, now):
-    if not state or not state.updated_at:
-        return None
-    return max(0.0, (now - scoring.as_utc(state.updated_at)).total_seconds())
+    last = last_heard(state)
+    return None if last is None else max(0.0, (now - last).total_seconds())
 
 
 def signal(state, status, now):
@@ -85,7 +90,7 @@ def check(db, now=None):
         if silent < (ALERT_RISKY_S if why else ALERT_S):
             continue
         battery = (st.recent or [{}])[-1].get('battery')
-        seen = scoring.as_utc(st.updated_at).astimezone(_tz(t.location_slug)).strftime('%H:%M')
+        seen = last_heard(st).astimezone(_tz(t.location_slug)).strftime('%H:%M')
         took = f'{int(silent // 60)} min' if silent >= 60 else f'{int(silent)} s'
         parts = [f'No signal for {took}', f'Last location {st.latitude:.5f}, {st.longitude:.5f} at {seen}' + (f', {why}' if why else '')]
         if battery is not None:

@@ -8,6 +8,7 @@ import PlacePage from './pages/PlacePage.jsx';
 import EatStay from './pages/EatStay.jsx';
 import Planner from './pages/Planner.jsx';
 import SafetyPage from './pages/SafetyPage.jsx';
+import SharePage from './pages/SharePage.jsx';
 import {Loading, Problem} from './components.jsx';
 import {href, rememberCity, useCities, useGuide, useRoute} from './lib.js';
 import {useTrip} from './trip.js';
@@ -18,7 +19,7 @@ const SAME_PAGE = {city: href.city, explore: href.explore, place: href.explore, 
 
 function Header({route}) {
   const {data: cities} = useCities(), city = route.city, trip = useTrip(city);
-  const ops = route.page === 'ops';
+  const ops = route.page === 'ops' || route.page === 'share';
   return <header className="site-head">
     <a className="skip" href="#content" onClick={e => { e.preventDefault(); document.getElementById('content')?.focus(); }}>Skip to content</a>
     <div className="site-head-row">
@@ -28,7 +29,7 @@ function Header({route}) {
           {!city && <option value="">Choose a city</option>}
           {cities.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
         </select></label>}
-      {ops && <a className="back-link" href={href.home}>Tourist site</a>}
+      {route.page === 'ops' && <a className="back-link" href={href.home}>Tourist site</a>}
       <a className="call-112" href="tel:112" aria-label="Call 112, the national emergency number">Emergency 112</a>
     </div>
     {city && !ops && <nav className="site-nav" aria-label={`Guide sections`}>
@@ -45,10 +46,11 @@ function Page({route}) {
   useEffect(() => { if (guide) rememberCity(guide.slug); }, [guide]);
   useEffect(() => {
     const names = {city: '', explore: 'Places to see', place: 'Place', eat: 'Eat and stay', plan: 'Trip planner', safety: 'Safety'};
-    document.title = route.page === 'ops' ? 'Operator dashboard – Safe Tour'
+    document.title = route.page === 'ops' ? 'Operator dashboard – Safe Tour' : route.page === 'share' ? 'Live location – Safe Tour'
       : guide ? `${names[route.page] ? names[route.page] + ' in ' : ''}${guide.name} – Safe Tour` : 'Safe Tour';
   }, [route.page, guide]);
   if (route.page === 'ops') return <Ops/>;
+  if (route.page === 'share') return <SharePage token={route.token}/>;
   if (!needsGuide) return <Home/>;
   if (loading) return <Loading what="Loading the city guide"/>;
   if (error || !guide) return <Problem error={error} retry={() => location.reload()}/>;

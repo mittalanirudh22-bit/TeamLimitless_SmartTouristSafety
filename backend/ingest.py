@@ -45,14 +45,26 @@ def process_batch(entries):
     t0 = time.perf_counter()
     with SessionLocal() as db:
         tourists = {t.tourist_id: t for t in db.query(m.Tourist).filter(m.Tourist.tourist_id.in_({e['tid'] for e in entries}))}
-        items = [dict(tourist=tourists[e['tid']], lat=e['lat'], lon=e['lon'], ts=datetime.fromisoformat(e['ts']), battery=e.get('battery'))
-                 for e in entries if e['tid'] in tourists and tourists[e['tid']].status == 'TRACKING']
+        live = [e for e in entries if e['tid'] in tourists and tourists[e['tid']].status == 'TRACKING']
+        items = [dict(tourist=tourists[e['tid']], lat=e['lat'], lon=e['lon'], ts=datetime.fromisoformat(e['ts']), battery=e.get('battery'),
+                      acc=e.get('acc'))
+                 for e in live if not e.get('heartbeat')]
         results = scoring.assess_batch(db, items)
+        # Any request from the phone proves it is alive, even a fix too vague to use: record when the server heard it.
+        seen = {}
+        for e in live:
+            t = scoring.as_utc(datetime.fromisoformat(e.get('seen') or e['ts']))
+            seen[e['tid']] = max(seen.get(e['tid'], t), t)
+        for tid, t in seen.items():
+            st = db.get(m.TouristState, tid) or m.TouristState(tourist_id=tid)
+            if st.last_seen_at is None or scoring.as_utc(st.last_seen_at) < t:
+                st.last_seen_at = t
+            db.add(st)
         for it, res in zip(items, results):
             if res.get('risk_level') == 'HIGH':
                 open_incident(db, it['tourist'].tourist_id, 'HIGH_RISK', 'HIGH', it['lat'], it['lon'],
                               f"Risk score {res['risk_score']}" + (f" in {res['geofence']}" if res['geofence'] else ''))
-        resolve_returned(db, list({it['tourist'].tourist_id for it in items}))
+        resolve_returned(db, list(seen))
         finish(db)
     with _stats_lock:
         stats['processed'] += len(items)

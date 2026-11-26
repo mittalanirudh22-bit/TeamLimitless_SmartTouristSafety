@@ -27,6 +27,7 @@ export function parseRoute(hash) {
   const [path, q = ''] = hash.replace(/^#\/?/, '').split('?');
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent), query = new URLSearchParams(q);
   if (parts[0] === 'ops') return {page: 'ops', query};
+  if (parts[0] === 'share' && parts[1]) return {page: 'share', token: parts[1], query};
   if (parts[0] === 'safety') return {page: 'safety', city: lastCity(), query};
   if (parts[0] === 'c' && parts[1]) {
     const city = parts[1], sub = parts[2] || 'city';

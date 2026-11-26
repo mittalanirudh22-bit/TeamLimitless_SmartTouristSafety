@@ -47,6 +47,31 @@ severity HIGH), otherwise after 10 min (MEDIUM). A battery at or below 10% is fl
 itself when locations arrive again. Pressing "Stop tracking" first never raises an alert. Timings are env vars:
 `SIGNAL_LOST_S`, `SIGNAL_ALERT_RISKY_S`, `SIGNAL_ALERT_S`, `SIGNAL_LOW_BATTERY`, `WATCHDOG_INTERVAL_S` (0 disables).
 
+## Cleaner GPS
+* **Smoothing:** phone fixes come with an accuracy radius. `backend/gps.py` blends each fix with the previous estimate
+  in proportion to how much each can be trusted (a small Kalman filter), so a phone standing still indoors no longer
+  looks like it is darting around. Fixes without an accuracy radius (demo replay, server feeds) are used as sent.
+* **Impossible jumps** (faster than `GPS_MAX_KMH`, default 250 km/h) are held back as glitches or spoofed locations,
+  unless the next fix confirms the new place.
+* **Weak signal still counts as alive:** a fix less accurate than 150 m isn't used for position, but the server records
+  that it heard from the phone (`tourist_state.last_seen_at`), so weak GPS indoors doesn't trigger a "no signal" alert.
+* **Offline:** with no mobile data the app keeps up to 300 locations on the phone and uploads them in order when the
+  connection returns. SOS falls back to a ready-written SMS to the emergency contact, plus a Call 112 button.
+
+## SOS in your own words
+After pressing SOS, the traveller can tap a quick option, type, or speak (browser speech-to-text, English or Hindi).
+`backend/triage.py` labels the message (medical, harassment, theft, lost, accident) with a character n-gram TF-IDF +
+logistic regression model trained on short English, Hindi and Hinglish phrases, flags life-threatening cues
+(bleeding, unconscious, weapon, drowning ...), and picks out guide places mentioned ("near Chowk" -> Chowk Bazaar).
+Operators see the label and a summary of every message. Triage only labels: an SOS always stays CRITICAL.
+The training phrases were written for this project; replace or extend them with real, anonymised messages.
+
+## Live location for family
+`POST /api/travellers/me/share` creates a view-only link valid for 1-72 hours (only a hash of the token is stored;
+at most 5 active links). Family open `#/share/<token>` and see the traveller's first name, position, trail, whether the
+phone has signal and whether SOS is active, refreshed every 15 s. No phone numbers or ID are shown. Links can be stopped
+any time (`DELETE /api/travellers/me/share/<id>`); expired links answer 410.
+
 ## Add a city
 `python scripts/setup_location.py --city Gangtok --state Sikkim --country India` creates `locations/gangtok/` with
 `config.yaml` (risk weights and thresholds), an empty `geofences.geojson` and `guide.todo.json`. Fill in the guide, draw the
